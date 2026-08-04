@@ -1,0 +1,151 @@
+import { apiClient } from './client'
+import type {
+  AgentChatResponse,
+  ApiResponse,
+  Category,
+  CreatedResource,
+  ModerationCheckResponse,
+  NotificationItem,
+  PageResponse,
+  PolishResponse,
+  Reply,
+  ReportItem,
+  TagSuggestResponse,
+  TopicDetail,
+  TopicSummary,
+  TopicSummaryResponse
+} from './types'
+import { categories as mockCategories, replies as mockReplies, reports as mockReports, topics as mockTopics } from '../app/mockData'
+
+export const liveApiEnabled = Boolean(import.meta.env.VITE_API_BASE_URL)
+export const apiModeLabel = liveApiEnabled ? 'API 优先' : 'Mock 模式'
+
+async function requestOr<T>(request: () => Promise<{ data: ApiResponse<T> }>, fallback: T): Promise<T> {
+  if (!liveApiEnabled) {
+    return fallback
+  }
+  try {
+    const response = await request()
+    return response.data.data
+  } catch {
+    return fallback
+  }
+}
+
+export function fetchCategories(): Promise<Category[]> {
+  return requestOr(() => apiClient.get<ApiResponse<Category[]>>('/categories'), mockCategories)
+}
+
+export function fetchTopics(params: { categoryId?: number | null; sort?: string; keyword?: string } = {}): Promise<PageResponse<TopicSummary>> {
+  const fallback = {
+    items: filterMockTopics(params),
+    page: 1,
+    pageSize: 20,
+    total: filterMockTopics(params).length
+  }
+  return requestOr(() => apiClient.get<ApiResponse<PageResponse<TopicSummary>>>('/topics', { params }), fallback)
+}
+
+export function fetchTopic(id: number): Promise<TopicDetail> {
+  const topic = mockTopics.find((item) => item.id === id) || mockTopics[0]
+  const fallback: TopicDetail = {
+    ...topic,
+    content: '我们准备把 Java 后端作为权限、事务和审计中心，Python Agent 只处理模型调用和工具编排。\n\n当前争议点在于 Agent 做站内问答时，应该直接查 MySQL，还是通过 Java 提供的内部工具接口。',
+    aiSummary: '这条讨论集中在 Java 与 Python Agent 的职责边界。'
+  }
+  return requestOr(() => apiClient.get<ApiResponse<TopicDetail>>(`/topics/${id}`), fallback)
+}
+
+export function createTopic(payload: { categoryId: number; title: string; content: string; tagNames: string[] }): Promise<CreatedResource> {
+  return requestOr(() => apiClient.post<ApiResponse<CreatedResource>>('/topics', payload), { id: Date.now() })
+}
+
+export function fetchReplies(topicId: number): Promise<Reply[]> {
+  return requestOr(() => apiClient.get<ApiResponse<Reply[]>>(`/topics/${topicId}/replies`), mockReplies.filter((reply) => reply.topicId === topicId))
+}
+
+export function createReply(topicId: number, content: string): Promise<CreatedResource> {
+  return requestOr(() => apiClient.post<ApiResponse<CreatedResource>>(`/topics/${topicId}/replies`, { content }), { id: Date.now() })
+}
+
+export function likeTopic(topicId: number) {
+  return requestOr(() => apiClient.post<ApiResponse<unknown>>(`/topics/${topicId}/like`), {})
+}
+
+export function favoriteTopic(topicId: number) {
+  return requestOr(() => apiClient.post<ApiResponse<unknown>>(`/topics/${topicId}/favorite`), {})
+}
+
+export function fetchNotifications(): Promise<NotificationItem[]> {
+  const fallback = [
+    {
+      id: 901,
+      type: 'REPLY_CREATED',
+      title: '收到新回复',
+      body: '林同学 回复了你的帖子。',
+      read: false,
+      createdAt: new Date().toISOString()
+    }
+  ]
+  return requestOr(() => apiClient.get<ApiResponse<NotificationItem[]>>('/notifications'), fallback)
+}
+
+export function fetchReports(): Promise<ReportItem[]> {
+  return requestOr(() => apiClient.get<ApiResponse<ReportItem[]>>('/admin/reports'), mockReports as ReportItem[])
+}
+
+export function handleReport(id: number, action: string, note = '') {
+  return requestOr(() => apiClient.post<ApiResponse<unknown>>(`/admin/reports/${id}/handle`, { action, note }), {})
+}
+
+export function askAgent(message: string): Promise<AgentChatResponse> {
+  return requestOr(() => apiClient.post<ApiResponse<AgentChatResponse>>('/agent/chat', { message }), {
+    answer: '后端暂未连接，当前显示前端兜底回答：Java 保留业务状态，Python Agent 提供建议。',
+    citations: [],
+    toolCalls: [{ toolName: 'frontend-fallback', status: 'OK' }]
+  })
+}
+
+export function polishDraft(payload: { title: string; content: string; tone: string }): Promise<PolishResponse> {
+  return requestOr(() => apiClient.post<ApiResponse<PolishResponse>>('/agent/polish', payload), {
+    title: 'Agent 与 Java 后端如何配合',
+    content: '我想确认论坛项目中的服务边界：哪些业务应该留在 Java 后端，哪些任务适合交给 Python Agent。',
+    notes: ['当前为前端兜底润色']
+  })
+}
+
+export function suggestTags(payload: { title: string; content: string; categoryId: number }): Promise<TagSuggestResponse> {
+  return requestOr(() => apiClient.post<ApiResponse<TagSuggestResponse>>('/agent/suggest-tags', payload), {
+    tags: ['Java', 'Agent', '架构']
+  })
+}
+
+export function summarizeTopic(topicId: number): Promise<TopicSummaryResponse> {
+  return requestOr(() => apiClient.post<ApiResponse<TopicSummaryResponse>>('/agent/summarize-topic', { topicId }), {
+    summary: '当前为前端兜底摘要。',
+    points: ['Java 负责业务边界', 'Agent 负责建议生成'],
+    followUpQuestions: ['是否需要生成引用？']
+  })
+}
+
+export function moderationCheck(content: string): Promise<ModerationCheckResponse> {
+  return requestOr(() => apiClient.post<ApiResponse<ModerationCheckResponse>>('/agent/moderation-check', { targetType: 'TOPIC', content }), {
+    riskLevel: 'LOW',
+    reasons: [],
+    suggestedAction: 'ALLOW'
+  })
+}
+
+function filterMockTopics(params: { categoryId?: number | null; sort?: string; keyword?: string }) {
+  let result = mockTopics.filter((topic) => !params.categoryId || topic.category.id === params.categoryId)
+  if (params.keyword) {
+    result = result.filter((topic) => `${topic.title} ${topic.excerpt} ${topic.tags.join(' ')}`.includes(params.keyword || ''))
+  }
+  if (params.sort === 'hot') {
+    result = [...result].sort((a, b) => b.likeCount + b.replyCount - (a.likeCount + a.replyCount))
+  }
+  if (params.sort === 'unanswered') {
+    result = result.filter((topic) => topic.replyCount <= 10)
+  }
+  return result
+}
