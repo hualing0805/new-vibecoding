@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from time import perf_counter
+
 from app.clients.model_client import ModelClient
 from app.schemas.agent import (
     AgentChatRequest,
@@ -28,11 +30,26 @@ class ForumAgent:
         citations: list[Citation] = []
         topics: list[dict] = []
 
+        search_started_at = perf_counter()
         try:
             topics = await self._java_tools.search_topics(request.message, trace_id=trace_id)
-            tool_calls.append(ToolCall(toolName="search_topics", status="OK"))
-        except Exception:
-            tool_calls.append(ToolCall(toolName="search_topics", status="FAILED"))
+            tool_calls.append(
+                ToolCall(
+                    toolName="search_topics",
+                    status="OK",
+                    elapsedMs=self._elapsed_ms(search_started_at),
+                    summary=f"found {len(topics)} topics",
+                )
+            )
+        except Exception as ex:
+            tool_calls.append(
+                ToolCall(
+                    toolName="search_topics",
+                    status="FAILED",
+                    elapsedMs=self._elapsed_ms(search_started_at),
+                    error=self._error_summary(ex),
+                )
+            )
 
         for topic in topics[:3]:
             citations.append(Citation(topicId=topic.get("id"), title=topic.get("title", "未命名帖子")))
@@ -80,6 +97,7 @@ class ForumAgent:
         return TagSuggestResponse(tags=(tags or ["Agent", "Java", "Vue3"])[:5])
 
     async def summarize_topic(self, request: TopicSummaryRequest, trace_id: str | None = None) -> TopicSummaryResponse:
+        context_started_at = perf_counter()
         try:
             context = await self._java_tools.get_topic_context(request.topic_id, trace_id=trace_id)
             topic = context.get("topic") or {}
@@ -93,15 +111,30 @@ class ForumAgent:
                     "前端以 API 优先、mock 兜底的方式推进页面联调",
                 ],
                 followUpQuestions=["是否要把该摘要写入缓存？", "是否需要把高赞回复作为引用来源？"],
+                citations=[Citation(topicId=topic.get("id") or request.topic_id, title=title)],
+                toolCalls=[
+                    ToolCall(
+                        toolName="get_topic_context",
+                        status="OK",
+                        elapsedMs=self._elapsed_ms(context_started_at),
+                        summary=f"loaded topic with {len(replies)} replies",
+                    )
+                ],
             )
-        except Exception:
-            pass
-
-        return TopicSummaryResponse(
-            summary=f"帖子 {request.topic_id} 的摘要需要结合正文和高赞回复生成。当前骨架返回演示摘要。",
-            points=["明确 Java 与 Agent 的职责边界", "AI 输出只作为建议", "后续可加入摘要缓存"],
-            followUpQuestions=["是否要把摘要写入缓存表？", "是否需要展示引用的回复？"],
-        )
+        except Exception as ex:
+            failed_tool_call = ToolCall(
+                toolName="get_topic_context",
+                status="FAILED",
+                elapsedMs=self._elapsed_ms(context_started_at),
+                error=self._error_summary(ex),
+            )
+            return TopicSummaryResponse(
+                summary=f"帖子 {request.topic_id} 的摘要需要结合正文和高赞回复生成。当前骨架返回演示摘要。",
+                points=["明确 Java 与 Agent 的职责边界", "AI 输出只作为建议", "后续可加入摘要缓存"],
+                followUpQuestions=["是否要把摘要写入缓存表？", "是否需要展示引用的回复？"],
+                citations=[],
+                toolCalls=[failed_tool_call],
+            )
 
     async def moderation_check(self, request: ModerationCheckRequest) -> ModerationCheckResponse:
         risky_words = ["攻击", "辱骂", "人肉", "泄露"]
@@ -119,6 +152,15 @@ class ForumAgent:
             return await self._model_client.complete(system=system, user=user)
         except Exception:
             return None
+
+    @staticmethod
+    def _elapsed_ms(started_at: float) -> int:
+        return max(0, int((perf_counter() - started_at) * 1000))
+
+    @staticmethod
+    def _error_summary(error: Exception) -> str:
+        text = f"{error.__class__.__name__}: {error}"
+        return text[:240]
 
     @staticmethod
     def _mock_chat_answer(request: AgentChatRequest, has_topics: bool) -> str:

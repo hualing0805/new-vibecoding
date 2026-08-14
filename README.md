@@ -92,7 +92,7 @@ VITE_API_BASE_URL=http://localhost:8080/api
 .\scripts\check.ps1
 ```
 
-M2.5 本地联调脚本：
+本地联调脚本：
 
 ```powershell
 .\scripts\start-local-stack.ps1
@@ -100,7 +100,7 @@ M2.5 本地联调脚本：
 .\scripts\stop-local-stack.ps1
 ```
 
-`verify-local-flow.ps1` 会验证健康检查、登录、发帖、回复、点赞、收藏、通知、举报和管理处理链路。
+`verify-local-flow.ps1` 会验证健康检查、登录、发帖、回复、点赞、收藏、通知、Agent chat、帖子摘要、举报和管理处理链路。
 
 前端视觉检查：
 
@@ -112,7 +112,7 @@ node .\scripts\visual-check.cjs
 
 ## 当前状态
 
-当前仓库处于 M3 完成阶段。三端都已经有基础入口，Java 后端已经从内存 demo 服务切换到 MySQL-backed 的 controller / service / repository 结构，内容、互动、通知、治理、用户登录注册和 Agent 内部工具都会读写本地数据库。登录注册已经接入 HMAC JWT，写接口会从 Bearer token 识别当前用户；互动状态、通知中心、未读数和个人收藏入口已经接入真实 API。前端仍保留公开读取的 mock fallback，方便后端未启动时继续设计页面。
+当前仓库处于 M4 完成阶段。三端都已经有基础入口，Java 后端已经从内存 demo 服务切换到 MySQL-backed 的 controller / service / repository 结构，内容、互动、通知、治理、用户登录注册和 Agent 内部工具都会读写本地数据库。登录注册已经接入 HMAC JWT，写接口会从 Bearer token 识别当前用户；互动状态、通知中心、未读数和个人收藏入口已经接入真实 API。AI Agent Gateway 已经记录会话、消息和工具调用审计，助手页和帖子摘要区会展示引用、工具状态和 sessionId。前端仍保留公开读取的 mock fallback，方便后端未启动时继续设计页面。
 
 本地 seed 演示账号：
 
@@ -122,13 +122,13 @@ password: ThreadMind@123
 ```
 
 每轮开发必须遵守 `docs/development-standard.md`，阶段开发说明见 `docs/development-manuals/`。
-下一阶段 M4 规划见 `docs/development-manuals/M4-agent-mvp-audit-plan.md`。
+下一阶段 M5 规划见 `docs/development-manuals/M5-ai-audit-console-plan.md`。
 
 Java 后端可使用系统 Maven，或使用仓库自带的 `.\.tools\apache-maven\bin\mvn.cmd`。
 
 ## 已验证
 
-- Python Agent：`python -m pytest` 通过。
+- Python Agent：`python -m pytest tests` 通过。
 - Vue 前端：`npm run typecheck` 通过。
 - Vue 前端：`npm run build` 通过。
 - 视觉检查：`node .\scripts\visual-check.cjs` 覆盖桌面和移动端核心路由，无横向溢出。

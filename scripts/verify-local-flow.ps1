@@ -137,6 +137,16 @@ if ($notificationItems.Count -gt 0) {
   Assert-Ok -Response $read -Step "mark notification read"
 }
 
+$agentChat = Invoke-Api -Method "POST" -Path "/agent/chat" -Token $userToken -Body @{
+  message = "How should Java and Python Agent cooperate in ThreadMind?"
+}
+Assert-Ok -Response $agentChat -Step "agent chat with audit"
+
+$agentSummary = Invoke-Api -Method "POST" -Path "/agent/summarize-topic" -Token $userToken -Body @{
+  topicId = $topicId
+}
+Assert-Ok -Response $agentSummary -Step "agent summarize topic with audit"
+
 $report = Invoke-Api -Method "POST" -Path "/reports" -Token $userToken -Body @{
   targetType = "TOPIC"
   targetId = $topicId

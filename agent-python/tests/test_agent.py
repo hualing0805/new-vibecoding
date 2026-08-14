@@ -30,3 +30,22 @@ def test_suggest_tags() -> None:
     assert response.status_code == 200
     assert "Vue3" in response.json()["tags"]
 
+
+def test_chat_returns_tool_trace() -> None:
+    response = client.post("/agent/chat", headers=headers, json={"message": "Agent 和 Java 怎么配合"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["toolCalls"]
+    assert payload["toolCalls"][0]["toolName"] == "search_topics"
+    assert "elapsedMs" in payload["toolCalls"][0]
+
+
+def test_summarize_topic_returns_tool_trace() -> None:
+    response = client.post("/agent/summarize-topic", headers=headers, json={"topicId": 101})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["toolCalls"]
+    assert payload["toolCalls"][0]["toolName"] == "get_topic_context"
+    assert "elapsedMs" in payload["toolCalls"][0]

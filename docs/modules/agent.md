@@ -12,12 +12,15 @@ Agent 模块负责把 AI 能力接入论坛，但不让 AI 绕过业务规则。
 - 帖子摘要。
 - 内容风险提示。
 - 内部工具：搜索帖子、读取帖子上下文。
+- 审计落库：记录 AI session、用户消息、助手消息和工具调用摘要。
 
 ## 设计思路
 
 Java 对前端暴露 `/api/agent/**`，Python 只接受 Java 内部调用。这样前端不用知道 Agent 服务地址，Agent 也不能脱离 Java 权限体系访问业务数据。
 
 Python Agent 不直接连接 MySQL。它通过 Java 的内部工具接口拿到授权后的帖子和回复。这个约束比开发速度更重要，因为论坛内容天然涉及隐私、隐藏状态和治理备注。
+
+M4 起，Java Agent Gateway 也是 AI 审计边界。Python 只返回 `answer`、`citations`、`toolCalls` 等结构化结果；Java 负责把可保存的摘要写入 `ai_sessions`、`ai_messages`、`ai_tool_calls`。审计失败不会阻断前端响应，但要写日志，便于后续排查。
 
 ## 功能设计
 
@@ -26,6 +29,13 @@ Python Agent 不直接连接 MySQL。它通过 Java 的内部工具接口拿到�
 输入用户问题和可选板块，Agent 通过工具搜索帖子，再组织回答。
 
 设计理念：回答必须基于可见内容。没有检索结果时，要说明信息不足，而不是编造站内共识。
+
+M4 返回内容包含：
+
+- `answer`：助手回答。
+- `citations`：引用帖子。
+- `toolCalls`：工具名称、状态、耗时、摘要和失败原因。
+- `sessionId`：Java 审计会话 ID。
 
 ### 发帖润色
 
@@ -45,6 +55,8 @@ Python Agent 不直接连接 MySQL。它通过 Java 的内部工具接口拿到�
 
 设计理念：摘要帮助读者快速进入讨论，但不应该替代原帖。详情页仍以正文和回复为主。
 
+M4 摘要响应同样返回引用、工具调用和 `sessionId`。前端详情页应展示这些轨迹，让用户知道摘要来自哪个上下文。
+
 ### 风险提示
 
 输入内容，返回风险等级、原因和建议动作。
@@ -57,10 +69,17 @@ Python Agent 不直接连接 MySQL。它通过 Java 的内部工具接口拿到�
 
 设计理念：工具返回结构化数据，便于审计和测试。工具接口使用 `X-Internal-Token`，避免被浏览器直接调用。
 
+工具调用约定：
+
+- `status=OK` 表示工具成功返回。
+- `status=FAILED` 表示工具执行失败但 Agent 可以降级回答。
+- `status=UNAVAILABLE` 表示 Python Agent 服务整体不可用，由 Java fallback 生成。
+- `elapsedMs` 记录工具调用耗时。
+- `summary` 和 `error` 必须是摘要，不保存内部 token、完整堆栈或超长 prompt。
+
 ## 后续实现要点
 
 - 模型返回需要 schema 校验。
-- 每次工具调用记录 traceId。
 - 支持无模型 Key 时的 mock 响应，保证本地开发不断。
-- 正式环境要对 prompt、工具输入和输出做脱敏。
-
+- 正式环境要继续加强 prompt、工具输入和输出脱敏。
+- M5 建议补 AI 审计后台、会话历史、摘要缓存和基础限流。

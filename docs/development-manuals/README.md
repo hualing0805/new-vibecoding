@@ -21,3 +21,5 @@
 | M3 规划 | `M3-interaction-notification-plan.md` | 互动状态、通知中心、收藏入口和热门排序规划 |
 | M3 | `M3-interaction-notification.md` | 互动状态、通知中心、收藏列表、未读数和通知规则 |
 | M4 规划 | `M4-agent-mvp-audit-plan.md` | AI MVP、Agent Gateway 审计落库和前端 AI 可解释体验规划 |
+| M4 | `M4-agent-mvp-audit.md` | AI 审计落库、工具轨迹、前端可解释展示和 fallback 审计 |
+| M5 规划 | `M5-ai-audit-console-plan.md` | AI 审计台、会话历史、摘要缓存和限流规划 |

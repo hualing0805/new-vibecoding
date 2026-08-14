@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Bot, CornerDownLeft, SearchCheck, UserRound } from 'lucide-vue-next'
+import { Bot, CornerDownLeft, FileSearch, SearchCheck, UserRound, Wrench } from 'lucide-vue-next'
 
 import { apiErrorText, askAgent } from '../api/forum'
+import type { AgentCitation, AgentToolCall } from '../api/types'
 
 const prompt = ref('最近大家怎么讨论 Agent 和 Java 的边界？')
 const messages = ref([
@@ -12,6 +13,9 @@ const messages = ref([
   }
 ])
 const toolStatus = ref('等待提问')
+const citations = ref<AgentCitation[]>([])
+const toolCalls = ref<AgentToolCall[]>([])
+const sessionId = ref<number | null>(null)
 const asking = ref(false)
 const error = ref('')
 
@@ -25,17 +29,25 @@ async function ask() {
   error.value = ''
   try {
     const response = await askAgent(message)
+    const calls = response.toolCalls || []
+    const refs = response.citations || []
     messages.value.push({
       role: 'assistant',
       text: response.answer
     })
-    toolStatus.value = response.toolCalls.length
-      ? response.toolCalls.map((tool) => `${tool.toolName}:${tool.status}`).join(' / ')
+    toolStatus.value = calls.length
+      ? calls.map((tool) => `${tool.toolName}:${tool.status}`).join(' / ')
       : '无工具调用'
+    citations.value = refs
+    toolCalls.value = calls
+    sessionId.value = response.sessionId ?? null
     prompt.value = ''
   } catch (err) {
     error.value = apiErrorText(err, '助手请求失败，请确认登录状态和服务可用性。')
     toolStatus.value = '请求失败'
+    toolCalls.value = []
+    citations.value = []
+    sessionId.value = null
   } finally {
     asking.value = false
   }
@@ -77,6 +89,37 @@ async function ask() {
     </section>
 
     <aside class="side-panel assistant-side">
+      <h2>AI 审计</h2>
+      <div class="scope-row">
+        <strong>Session</strong>
+        <span>{{ sessionId || '未生成' }}</span>
+      </div>
+
+      <div class="audit-block">
+        <div class="dock-head">
+          <FileSearch :size="17" aria-hidden="true" />
+          <strong>引用</strong>
+        </div>
+        <RouterLink v-for="item in citations" :key="item.topicId" class="audit-row" :to="`/topics/${item.topicId}`">
+          {{ item.title }}
+        </RouterLink>
+        <p v-if="!citations.length" class="muted-line">暂无引用</p>
+      </div>
+
+      <div class="audit-block">
+        <div class="dock-head">
+          <Wrench :size="17" aria-hidden="true" />
+          <strong>工具调用</strong>
+        </div>
+        <div v-for="tool in toolCalls" :key="`${tool.toolName}-${tool.status}-${tool.elapsedMs}`" class="audit-row">
+          <strong>{{ tool.toolName }}</strong>
+          <span>{{ tool.status }}{{ tool.elapsedMs !== undefined && tool.elapsedMs !== null ? ` · ${tool.elapsedMs}ms` : '' }}</span>
+          <small v-if="tool.summary">{{ tool.summary }}</small>
+          <small v-if="tool.error">{{ tool.error }}</small>
+        </div>
+        <p v-if="!toolCalls.length" class="muted-line">暂无工具调用</p>
+      </div>
+
       <h2>引用范围</h2>
       <div class="scope-row">
         <strong>公开帖子</strong>

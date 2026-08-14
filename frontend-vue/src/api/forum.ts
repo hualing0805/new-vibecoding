@@ -209,9 +209,10 @@ export function handleReport(id: number, action: string, note = '') {
 
 export function askAgent(message: string): Promise<AgentChatResponse> {
   return requestRequired(() => apiClient.post<ApiResponse<AgentChatResponse>>('/agent/chat', { message }), {
-    answer: '后端暂未连接，当前显示前端兜底回答：Java 保留业务状态，Python Agent 提供建议。',
-    citations: [],
-    toolCalls: [{ toolName: 'frontend-fallback', status: 'OK' }]
+    answer: '后端暂未连接，当前显示前端兜底回答：Java 保留业务状态和审计，Python Agent 提供建议。',
+    citations: mockTopics.slice(0, 2).map((topic) => ({ topicId: topic.id, title: topic.title })),
+    toolCalls: [{ toolName: 'frontend-fallback', status: 'OK', elapsedMs: 0, summary: 'mock response' }],
+    sessionId: null
   })
 }
 
@@ -230,10 +231,14 @@ export function suggestTags(payload: { title: string; content: string; categoryI
 }
 
 export function summarizeTopic(topicId: number): Promise<TopicSummaryResponse> {
+  const topic = mockTopics.find((item) => item.id === topicId)
   return requestRequired(() => apiClient.post<ApiResponse<TopicSummaryResponse>>('/agent/summarize-topic', { topicId }), {
     summary: '当前为前端兜底摘要。',
     points: ['Java 负责业务边界', 'Agent 负责建议生成'],
-    followUpQuestions: ['是否需要生成引用？']
+    followUpQuestions: ['是否需要生成引用？'],
+    citations: topic ? [{ topicId: topic.id, title: topic.title }] : [],
+    toolCalls: [{ toolName: 'frontend-fallback', status: 'OK', elapsedMs: 0, summary: 'mock summary' }],
+    sessionId: null
   })
 }
 
@@ -270,7 +275,7 @@ function filterMockTopics(params: { categoryId?: number | null; sort?: string; k
     result = [...result].sort((a, b) => b.likeCount + b.replyCount - (a.likeCount + a.replyCount))
   }
   if (params.sort === 'unanswered') {
-    result = result.filter((topic) => topic.replyCount <= 10)
+    result = result.filter((topic) => topic.replyCount === 0)
   }
   return result
 }

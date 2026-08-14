@@ -26,15 +26,29 @@ public final class AgentDtos {
 
     public record ToolCallDto(
             String toolName,
-            String status
+            String status,
+            Integer elapsedMs,
+            String summary,
+            String error
     ) {
+        public ToolCallDto(String toolName, String status) {
+            this(toolName, status, null, null, null);
+        }
     }
 
     public record AgentChatResponse(
             String answer,
             List<CitationDto> citations,
-            List<ToolCallDto> toolCalls
+            List<ToolCallDto> toolCalls,
+            Long sessionId
     ) {
+        public AgentChatResponse(String answer, List<CitationDto> citations, List<ToolCallDto> toolCalls) {
+            this(answer, citations, toolCalls, null);
+        }
+
+        public AgentChatResponse withSessionId(Long sessionId) {
+            return new AgentChatResponse(answer, citations, toolCalls, sessionId);
+        }
     }
 
     public record PolishRequest(
@@ -71,8 +85,18 @@ public final class AgentDtos {
     public record TopicSummaryResponse(
             String summary,
             List<String> points,
-            List<String> followUpQuestions
+            List<String> followUpQuestions,
+            List<CitationDto> citations,
+            List<ToolCallDto> toolCalls,
+            Long sessionId
     ) {
+        public TopicSummaryResponse(String summary, List<String> points, List<String> followUpQuestions) {
+            this(summary, points, followUpQuestions, List.of(), List.of(), null);
+        }
+
+        public TopicSummaryResponse withSessionId(Long sessionId) {
+            return new TopicSummaryResponse(summary, points, followUpQuestions, citations, toolCalls, sessionId);
+        }
     }
 
     public record ModerationCheckRequest(
@@ -88,4 +112,3 @@ public final class AgentDtos {
     ) {
     }
 }
-

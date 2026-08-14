@@ -336,6 +336,8 @@ a:focus-visible {
   color: #123f42;
   background: #d8ece8;
   border: 1px solid #a7d1cb;
+  max-width: min(360px, 100%);
+  overflow-wrap: anywhere;
 }
 
 .metric-row {
@@ -841,6 +843,45 @@ a:focus-visible {
 
 .scope-row {
   align-items: center;
+}
+
+.audit-block,
+.summary-audit {
+  display: grid;
+  gap: 10px;
+}
+
+.summary-audit {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-line);
+}
+
+.audit-row {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  color: var(--color-ink);
+  text-decoration: none;
+  background: #f8faf5;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  overflow-wrap: anywhere;
+}
+
+.audit-row:hover {
+  border-color: #9fb8d5;
+}
+
+.audit-row span,
+.audit-row small,
+.muted-line,
+.summary-audit small {
+  color: var(--color-muted);
+}
+
+.muted-line {
+  margin: 0;
 }
 
 .admin-actions {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Bot, Heart, MessageSquare, Send, Star } from 'lucide-vue-next'
+import { Bot, FileSearch, Heart, MessageSquare, Send, Star, Wrench } from 'lucide-vue-next'
 
 import {
   apiErrorText,
@@ -16,7 +16,7 @@ import {
   unlikeTopic
 } from '../api/forum'
 import { topics as mockTopics } from '../app/mockData'
-import type { InteractionStatus, Reply, TopicDetail } from '../api/types'
+import type { AgentCitation, AgentToolCall, InteractionStatus, Reply, TopicDetail } from '../api/types'
 
 const route = useRoute()
 const replyText = ref('')
@@ -28,6 +28,9 @@ const topic = ref<TopicDetail>({
 })
 const topicReplies = ref<Reply[]>([])
 const summaryPoints = ref<string[]>([])
+const summaryCitations = ref<AgentCitation[]>([])
+const summaryToolCalls = ref<AgentToolCall[]>([])
+const summarySessionId = ref<number | null>(null)
 const actionError = ref('')
 const replying = ref(false)
 const reacting = ref(false)
@@ -66,10 +69,16 @@ async function loadTopic() {
     if (aiSummary.summary) {
       topic.value = { ...topic.value, aiSummary: aiSummary.summary }
       summaryPoints.value = aiSummary.points
+      summaryCitations.value = aiSummary.citations || []
+      summaryToolCalls.value = aiSummary.toolCalls || []
+      summarySessionId.value = aiSummary.sessionId ?? null
     }
   } catch {
     topic.value = { ...topic.value, aiSummary: '登录后可生成 AI 摘要。' }
     summaryPoints.value = []
+    summaryCitations.value = []
+    summaryToolCalls.value = []
+    summarySessionId.value = null
   }
 }
 
@@ -167,6 +176,27 @@ watch(topicId, loadTopic)
       <ul>
         <li v-for="point in summaryPoints" :key="point">{{ point }}</li>
       </ul>
+      <div class="summary-audit">
+        <small>Session {{ summarySessionId || '未生成' }}</small>
+        <div class="dock-head">
+          <FileSearch :size="16" aria-hidden="true" />
+          <strong>引用</strong>
+        </div>
+        <RouterLink v-for="item in summaryCitations" :key="item.topicId" class="audit-row" :to="`/topics/${item.topicId}`">
+          {{ item.title }}
+        </RouterLink>
+        <p v-if="!summaryCitations.length" class="muted-line">暂无引用</p>
+
+        <div class="dock-head">
+          <Wrench :size="16" aria-hidden="true" />
+          <strong>工具</strong>
+        </div>
+        <div v-for="tool in summaryToolCalls" :key="`${tool.toolName}-${tool.status}-${tool.elapsedMs}`" class="audit-row">
+          <strong>{{ tool.toolName }}</strong>
+          <span>{{ tool.status }}{{ tool.elapsedMs !== undefined && tool.elapsedMs !== null ? ` · ${tool.elapsedMs}ms` : '' }}</span>
+        </div>
+        <p v-if="!summaryToolCalls.length" class="muted-line">暂无工具调用</p>
+      </div>
     </aside>
 
     <section class="reply-section">

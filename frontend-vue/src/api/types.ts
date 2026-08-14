@@ -82,10 +82,24 @@ export interface AuthResponse {
   user: AuthUser
 }
 
+export interface AgentCitation {
+  topicId: number
+  title: string
+}
+
+export interface AgentToolCall {
+  toolName: string
+  status: string
+  elapsedMs?: number | null
+  summary?: string | null
+  error?: string | null
+}
+
 export interface AgentChatResponse {
   answer: string
-  citations: Array<{ topicId: number; title: string }>
-  toolCalls: Array<{ toolName: string; status: string }>
+  citations: AgentCitation[]
+  toolCalls: AgentToolCall[]
+  sessionId?: number | null
 }
 
 export interface PolishResponse {
@@ -102,6 +116,9 @@ export interface TopicSummaryResponse {
   summary: string
   points: string[]
   followUpQuestions: string[]
+  citations: AgentCitation[]
+  toolCalls: AgentToolCall[]
+  sessionId?: number | null
 }
 
 export interface ModerationCheckResponse {

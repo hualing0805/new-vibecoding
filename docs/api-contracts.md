@@ -1,7 +1,7 @@
 # API 契约草案
 
 版本：v0.1  
-适用阶段：M1-M3
+适用阶段：M1-M4
 
 ## 1. 基础约定
 
@@ -240,6 +240,7 @@
 ## 6. AI 接口
 
 Java 对前端暴露 `/api/agent/**`，Java 内部调用 Python `/agent/**`。
+M4 起 Java Agent Gateway 会把 AI 会话、用户消息、助手消息和工具调用摘要写入 `ai_sessions`、`ai_messages`、`ai_tool_calls`，前端响应会返回 `sessionId` 方便排查。
 
 ### POST `/api/agent/chat`
 
@@ -267,9 +268,13 @@ Java 对前端暴露 `/api/agent/**`，Java 内部调用 Python `/agent/**`。
   "toolCalls": [
     {
       "toolName": "search_topics",
-      "status": "OK"
+      "status": "OK",
+      "elapsedMs": 32,
+      "summary": "found 3 topics",
+      "error": null
     }
-  ]
+  ],
+  "sessionId": 501
 }
 ```
 
@@ -309,7 +314,33 @@ Java 对前端暴露 `/api/agent/**`，Java 内部调用 Python `/agent/**`。
 }
 ```
 
-返回摘要、主要观点和可继续追问的问题。
+返回摘要、主要观点、可继续追问的问题、引用和工具调用轨迹。
+
+响应 `data`：
+
+```json
+{
+  "summary": "这条主题主要讨论 Java 和 Python Agent 的职责边界。",
+  "points": ["Java 保留业务状态", "Python Agent 只调用受控工具"],
+  "followUpQuestions": ["是否需要把摘要写入缓存？"],
+  "citations": [
+    {
+      "topicId": 101,
+      "title": "Spring Boot 和 Agent 服务边界怎么划分"
+    }
+  ],
+  "toolCalls": [
+    {
+      "toolName": "get_topic_context",
+      "status": "OK",
+      "elapsedMs": 18,
+      "summary": "loaded topic with 2 replies",
+      "error": null
+    }
+  ],
+  "sessionId": 502
+}
+```
 
 ### POST `/api/agent/moderation-check`
 
@@ -340,6 +371,20 @@ Java 调 Python 时添加：
 - `X-Trace-Id`
 
 Python 返回结构必须能被 Java 反序列化。模型原始自然语言不能直接透传给前端，至少要经过 schema 校验。
+
+工具调用结构：
+
+```json
+{
+  "toolName": "search_topics",
+  "status": "OK",
+  "elapsedMs": 24,
+  "summary": "found 3 topics",
+  "error": null
+}
+```
+
+失败时 `status` 使用 `FAILED` 或 `UNAVAILABLE`，`error` 只返回摘要，不返回密钥、内部 token 或完整堆栈。
 
 ### GET `/api/internal/agent/topics/search`
 

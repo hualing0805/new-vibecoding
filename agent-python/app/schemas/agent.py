@@ -11,6 +11,9 @@ class Citation(BaseModel):
 class ToolCall(BaseModel):
     tool_name: str = Field(alias="toolName")
     status: str
+    elapsed_ms: int | None = Field(default=None, alias="elapsedMs")
+    summary: str | None = None
+    error: str | None = None
 
     model_config = {"populate_by_name": True}
 
@@ -65,6 +68,8 @@ class TopicSummaryResponse(BaseModel):
     summary: str
     points: list[str] = Field(default_factory=list)
     follow_up_questions: list[str] = Field(default_factory=list, alias="followUpQuestions")
+    citations: list[Citation] = Field(default_factory=list)
+    tool_calls: list[ToolCall] = Field(default_factory=list, alias="toolCalls")
 
     model_config = {"populate_by_name": True}
 
@@ -82,4 +87,3 @@ class ModerationCheckResponse(BaseModel):
     suggested_action: str = Field(alias="suggestedAction")
 
     model_config = {"populate_by_name": True}
-
