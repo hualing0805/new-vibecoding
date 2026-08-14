@@ -13,6 +13,14 @@
 - Java API：`http://localhost:8080/api`
 - Python Agent：`http://localhost:8000`
 
+登录态：
+
+- `/api/auth/login` 和 `/api/auth/register` 返回 `token`。
+- 需要登录的接口使用请求头 `Authorization: Bearer <token>`。
+- 游客可访问公开板块和帖子读取接口。
+- 发帖、回复、点赞、收藏、通知、举报和 AI 助手接口需要登录。
+- `/api/admin/**` 需要 `ADMIN` 或 `MODERATOR` 角色。
+
 通用响应：
 
 ```json

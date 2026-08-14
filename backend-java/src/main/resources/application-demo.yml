@@ -1,13 +1,16 @@
 spring:
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
-      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:threadmind}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: ${MYSQL_USERNAME:threadmind}
+    password: ${MYSQL_PASSWORD:threadmind}
+    driver-class-name: com.mysql.cj.jdbc.Driver
   flyway:
-    enabled: false
+    enabled: true
 
 threadmind:
+  security:
+    jwt-secret: ${JWT_SECRET:threadmind-local-development-secret-change-me}
+    token-ttl-seconds: ${JWT_TTL_SECONDS:86400}
   agent:
     base-url: ${AGENT_BASE_URL:http://localhost:8000}
     internal-token: ${AGENT_INTERNAL_TOKEN:dev-internal-token}
-

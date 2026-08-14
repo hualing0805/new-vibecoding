@@ -60,6 +60,19 @@ export interface CreatedResource {
   id: number
 }
 
+export interface AuthUser {
+  id: number
+  username: string
+  nickname: string
+  avatarUrl: string
+  roles: string[]
+}
+
+export interface AuthResponse {
+  token: string
+  user: AuthUser
+}
+
 export interface AgentChatResponse {
   answer: string
   citations: Array<{ topicId: number; title: string }>
@@ -108,4 +121,3 @@ export interface ReportItem {
   risk: string
   createdAt: string
 }
-

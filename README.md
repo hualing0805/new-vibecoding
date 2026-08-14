@@ -9,6 +9,7 @@ ThreadMind 是一个以网络论坛为主题的 AI 全栈项目：Java Spring Bo
 - 数据库设计：[docs/database-design.md](docs/database-design.md)
 - 服务边界决策：[docs/adr/0001-service-boundaries.md](docs/adr/0001-service-boundaries.md)
 - 模块设计索引：[docs/modules/README.md](docs/modules/README.md)
+- 开发手册索引：[docs/development-manuals/README.md](docs/development-manuals/README.md)
 - 产品基线：[PRODUCT.md](PRODUCT.md)
 
 ## 目录
@@ -37,11 +38,26 @@ cd infra
 docker compose up -d
 ```
 
+如果使用的是你自己安装的本地 MySQL，而不是 `infra/docker-compose.yml`，先用 root 或管理员账号执行：
+
+```powershell
+mysql -uroot -p < scripts/mysql-bootstrap.sql
+```
+
+这个脚本会创建 `threadmind` 数据库和 `threadmind/threadmind` 应用账号。Spring Boot 默认使用这个低权限账号连接数据库。
+
 启动 Java 后端：
 
 ```powershell
 cd backend-java
 mvn spring-boot:run
+```
+
+如果系统没有安装 Maven，可以使用仓库自带 Maven：
+
+```powershell
+cd backend-java
+..\.tools\apache-maven\bin\mvn.cmd spring-boot:run
 ```
 
 启动 Python Agent：
@@ -85,9 +101,18 @@ node .\scripts\visual-check.cjs
 
 ## 当前状态
 
-当前仓库处于 M1 到 M2 之间的模块化阶段。三端都已经有基础入口，Java 后端补齐了内容、互动、通知、治理和 Agent 内部工具接口，前端已改为 API 模式可切换，数据库迁移脚本已准备好。后续重点是把 Java 的内存应用服务替换成真实 MySQL Repository。
+当前仓库处于 M2 收口阶段。三端都已经有基础入口，Java 后端已经从内存 demo 服务切换到 MySQL-backed 的 controller / service / repository 结构，内容、互动、通知、治理、用户登录注册和 Agent 内部工具都会读写本地数据库。登录注册已经接入 HMAC JWT，写接口会从 Bearer token 识别当前用户；前端仍保留 mock fallback，方便后端未启动时继续设计页面。
 
-Java 后端需要本机安装 Maven 后运行 `mvn test` 或 `mvn spring-boot:run`。
+本地 seed 演示账号：
+
+```text
+username: demo
+password: ThreadMind@123
+```
+
+每轮阶段开发说明见 `docs/development-manuals/`。
+
+Java 后端可使用系统 Maven，或使用仓库自带的 `.\.tools\apache-maven\bin\mvn.cmd`。
 
 ## 已验证
 
@@ -95,5 +120,4 @@ Java 后端需要本机安装 Maven 后运行 `mvn test` 或 `mvn spring-boot:ru
 - Vue 前端：`npm run typecheck` 通过。
 - Vue 前端：`npm run build` 通过。
 - 视觉检查：`node .\scripts\visual-check.cjs` 覆盖桌面和移动端核心路由，无横向溢出。
-
-当前机器没有 Maven，Java 测试文件已补齐，但还未实际执行。
+- Java 后端：`mvn test` 通过。

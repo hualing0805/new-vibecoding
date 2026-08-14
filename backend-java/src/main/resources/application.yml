@@ -22,7 +22,9 @@ management:
         include: health,info
 
 threadmind:
+  security:
+    jwt-secret: ${JWT_SECRET:threadmind-local-development-secret-change-me}
+    token-ttl-seconds: ${JWT_TTL_SECONDS:86400}
   agent:
     base-url: ${AGENT_BASE_URL:http://localhost:8000}
     internal-token: ${AGENT_INTERNAL_TOKEN:dev-internal-token}
-

@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import { Bot, Bell, Home, LogIn, PencilLine, Plus, Search, ShieldCheck } from 'lucide-vue-next'
-import { RouterLink, RouterView } from 'vue-router'
+import { Bot, Bell, Home, LogIn, LogOut, PencilLine, Plus, Search, ShieldCheck } from 'lucide-vue-next'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
+
+import { useSessionStore } from '../stores/session'
+
+const session = useSessionStore()
+const router = useRouter()
 
 const navItems = [
   { to: '/', label: '首页', icon: Home },
@@ -9,6 +14,11 @@ const navItems = [
   { to: '/admin', label: '管理', icon: ShieldCheck },
   { to: '/login', label: '登录', icon: LogIn }
 ]
+
+function logout() {
+  session.logout()
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -37,8 +47,12 @@ const navItems = [
           <input placeholder="搜索帖子、标签、作者" />
         </label>
         <div class="top-actions">
+          <span v-if="session.isSignedIn" class="session-chip">{{ session.nickname }}</span>
           <button class="icon-button" type="button" aria-label="通知">
             <Bell :size="18" aria-hidden="true" />
+          </button>
+          <button v-if="session.isSignedIn" class="icon-button" type="button" aria-label="退出登录" @click="logout">
+            <LogOut :size="18" aria-hidden="true" />
           </button>
           <RouterLink class="primary-action" to="/topics/new">
             <Plus :size="18" aria-hidden="true" />
@@ -53,4 +67,3 @@ const navItems = [
     </div>
   </div>
 </template>
-

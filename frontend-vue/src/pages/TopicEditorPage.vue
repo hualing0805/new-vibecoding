@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Bot, Check, Eye, Sparkles, Tags } from 'lucide-vue-next'
 
-import { createTopic, moderationCheck, polishDraft as polishDraftApi, suggestTags } from '../api/forum'
-import { categories } from '../app/mockData'
+import { createTopic, fetchCategories, moderationCheck, polishDraft as polishDraftApi, suggestTags } from '../api/forum'
+import { categories as mockCategories } from '../app/mockData'
+import type { Category } from '../api/types'
 
 const title = ref('agent 怎么和 java 配合')
 const content = ref('我想问一下服务边界怎么设计，哪些东西放 Java，哪些东西放 Python Agent。')
-const categoryId = ref(categories[0].id)
+const categories = ref<Category[]>(mockCategories)
+const categoryId = ref(mockCategories[0].id)
 const selectedTags = ref<string[]>(['Java', 'Agent'])
 const tone = ref('clear')
 const riskText = ref('未发现明显风险，发布前仍保留人工确认。')
@@ -72,6 +74,13 @@ async function publishTopic() {
   })
   await router.push(`/topics/${created.id}`)
 }
+
+onMounted(async () => {
+  categories.value = await fetchCategories()
+  if (!categories.value.some((category) => category.id === categoryId.value)) {
+    categoryId.value = categories.value[0]?.id || categoryId.value
+  }
+})
 </script>
 
 <template>

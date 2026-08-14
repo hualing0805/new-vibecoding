@@ -2,6 +2,8 @@ import { apiClient } from './client'
 import type {
   AgentChatResponse,
   ApiResponse,
+  AuthResponse,
+  AuthUser,
   Category,
   CreatedResource,
   ModerationCheckResponse,
@@ -20,6 +22,11 @@ import { categories as mockCategories, replies as mockReplies, reports as mockRe
 export const liveApiEnabled = Boolean(import.meta.env.VITE_API_BASE_URL)
 export const apiModeLabel = liveApiEnabled ? 'API 优先' : 'Mock 模式'
 
+async function requestLive<T>(request: () => Promise<{ data: ApiResponse<T> }>): Promise<T> {
+  const response = await request()
+  return response.data.data
+}
+
 async function requestOr<T>(request: () => Promise<{ data: ApiResponse<T> }>, fallback: T): Promise<T> {
   if (!liveApiEnabled) {
     return fallback
@@ -30,6 +37,24 @@ async function requestOr<T>(request: () => Promise<{ data: ApiResponse<T> }>, fa
   } catch {
     return fallback
   }
+}
+
+export function loginUser(payload: { username: string; password: string }): Promise<AuthResponse> {
+  if (!liveApiEnabled) {
+    return Promise.resolve(mockAuthResponse(payload.username))
+  }
+  return requestLive(() => apiClient.post<ApiResponse<AuthResponse>>('/auth/login', payload))
+}
+
+export function registerUser(payload: { username: string; email: string; password: string; nickname: string }): Promise<AuthResponse> {
+  if (!liveApiEnabled) {
+    return Promise.resolve(mockAuthResponse(payload.username, payload.nickname))
+  }
+  return requestLive(() => apiClient.post<ApiResponse<AuthResponse>>('/auth/register', payload))
+}
+
+export function fetchCurrentUser(): Promise<AuthUser> {
+  return requestLive(() => apiClient.get<ApiResponse<AuthUser>>('/users/me'))
 }
 
 export function fetchCategories(): Promise<Category[]> {
@@ -148,4 +173,17 @@ function filterMockTopics(params: { categoryId?: number | null; sort?: string; k
     result = result.filter((topic) => topic.replyCount <= 10)
   }
   return result
+}
+
+function mockAuthResponse(username: string, nickname = username || '演示用户'): AuthResponse {
+  return {
+    token: `demo.${Date.now()}`,
+    user: {
+      id: 1,
+      username: username || 'demo',
+      nickname: nickname || '演示用户',
+      avatarUrl: '',
+      roles: ['USER', 'ADMIN']
+    }
+  }
 }

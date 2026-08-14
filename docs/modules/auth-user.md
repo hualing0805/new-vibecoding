@@ -15,7 +15,7 @@
 
 注册和登录都只返回必要用户摘要，不把密码、邮箱验证状态、登录失败次数等内部字段交给前端。前端只需要知道当前用户是谁、有哪些角色、是否能进入管理页。
 
-M1 阶段返回 demo token，是为了让前端和其他模块先能串流程。正式实现时 token 应替换为 JWT，用户信息从数据库读取，密码使用 BCrypt 哈希。
+M2 收口阶段已经替换为 HMAC JWT。登录和注册返回的 token 由 Java 后端签发，前端通过 `Authorization: Bearer <token>` 调用写接口。用户信息从 MySQL 读取，注册密码使用 Spring Security 的 `PasswordEncoder` 哈希保存。
 
 ## 功能设计
 
@@ -40,8 +40,8 @@ M1 阶段返回 demo token，是为了让前端和其他模块先能串流程。
 ## 后续实现要点
 
 - `users.username` 和 `users.email` 必须唯一。
-- 密码只保存 BCrypt 哈希。
+- 密码只保存带算法前缀的哈希，生产环境不要使用 `{noop}` seed 密码。
 - 登录失败要做频率限制。
 - JWT 密钥从环境变量读取，不提交仓库。
 - 用户状态为 `LOCKED` 或 `DISABLED` 时，登录应返回明确错误。
-
+- 后续需要增加 refresh token、退出登录撤销策略和管理员重置密码流程。

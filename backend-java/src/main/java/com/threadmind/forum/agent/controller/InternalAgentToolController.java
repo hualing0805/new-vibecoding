@@ -5,7 +5,7 @@ import com.threadmind.forum.agent.dto.AgentToolDtos.AgentTopicContextResponse;
 import com.threadmind.forum.agent.dto.AgentToolDtos.AgentTopicSearchResponse;
 import com.threadmind.forum.common.api.ApiResponse;
 import com.threadmind.forum.common.web.TraceContext;
-import com.threadmind.forum.forum.service.ForumDemoService;
+import com.threadmind.forum.forum.service.ForumService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,11 +21,11 @@ public class InternalAgentToolController {
 
     private static final String INTERNAL_TOKEN_HEADER = "X-Internal-Token";
 
-    private final ForumDemoService forumDemoService;
+    private final ForumService forumService;
     private final AgentProperties agentProperties;
 
-    public InternalAgentToolController(ForumDemoService forumDemoService, AgentProperties agentProperties) {
-        this.forumDemoService = forumDemoService;
+    public InternalAgentToolController(ForumService forumService, AgentProperties agentProperties) {
+        this.forumService = forumService;
         this.agentProperties = agentProperties;
     }
 
@@ -37,7 +37,7 @@ public class InternalAgentToolController {
     ) {
         verifyInternalToken(token);
         return ApiResponse.ok(
-                new AgentTopicSearchResponse(forumDemoService.searchTopicsForAgent(keyword, limit)),
+                new AgentTopicSearchResponse(forumService.searchTopicsForAgent(keyword, limit)),
                 TraceContext.currentTraceId()
         );
     }
@@ -50,8 +50,8 @@ public class InternalAgentToolController {
         verifyInternalToken(token);
         return ApiResponse.ok(
                 new AgentTopicContextResponse(
-                        forumDemoService.getTopicContextForAgent(id),
-                        forumDemoService.getRepliesForAgent(id)
+                        forumService.getTopicContextForAgent(id),
+                        forumService.getRepliesForAgent(id)
                 ),
                 TraceContext.currentTraceId()
         );
@@ -59,8 +59,7 @@ public class InternalAgentToolController {
 
     private void verifyInternalToken(String token) {
         if (token == null || !token.equals(agentProperties.getInternalToken())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "内部工具令牌无效");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal tool token");
         }
     }
 }
-

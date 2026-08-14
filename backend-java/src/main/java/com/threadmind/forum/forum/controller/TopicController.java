@@ -9,7 +9,7 @@ import com.threadmind.forum.forum.dto.CreatedResourceResponse;
 import com.threadmind.forum.forum.dto.ReplyDto;
 import com.threadmind.forum.forum.dto.TopicDetailDto;
 import com.threadmind.forum.forum.dto.TopicSummaryDto;
-import com.threadmind.forum.forum.service.ForumDemoService;
+import com.threadmind.forum.forum.service.ForumService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,10 +25,10 @@ import java.util.List;
 @RequestMapping("/api/topics")
 public class TopicController {
 
-    private final ForumDemoService forumDemoService;
+    private final ForumService forumService;
 
-    public TopicController(ForumDemoService forumDemoService) {
-        this.forumDemoService = forumDemoService;
+    public TopicController(ForumService forumService) {
+        this.forumService = forumService;
     }
 
     @GetMapping
@@ -40,24 +40,24 @@ public class TopicController {
             @RequestParam(defaultValue = "20") int pageSize
     ) {
         return ApiResponse.ok(
-                forumDemoService.listTopics(categoryId, keyword, sort, page, pageSize),
+                forumService.listTopics(categoryId, keyword, sort, page, pageSize),
                 TraceContext.currentTraceId()
         );
     }
 
     @PostMapping
     public ApiResponse<CreatedResourceResponse> createTopic(@Valid @RequestBody CreateTopicRequest request) {
-        return ApiResponse.ok(forumDemoService.createTopic(request), TraceContext.currentTraceId());
+        return ApiResponse.ok(forumService.createTopic(request), TraceContext.currentTraceId());
     }
 
     @GetMapping("/{id}")
     public ApiResponse<TopicDetailDto> getTopic(@PathVariable Long id) {
-        return ApiResponse.ok(forumDemoService.getTopic(id), TraceContext.currentTraceId());
+        return ApiResponse.ok(forumService.getTopic(id), TraceContext.currentTraceId());
     }
 
     @GetMapping("/{id}/replies")
     public ApiResponse<List<ReplyDto>> listReplies(@PathVariable Long id) {
-        return ApiResponse.ok(forumDemoService.listReplies(id), TraceContext.currentTraceId());
+        return ApiResponse.ok(forumService.listReplies(id), TraceContext.currentTraceId());
     }
 
     @PostMapping("/{id}/replies")
@@ -65,7 +65,6 @@ public class TopicController {
             @PathVariable Long id,
             @Valid @RequestBody CreateReplyRequest request
     ) {
-        return ApiResponse.ok(forumDemoService.createReply(id, request), TraceContext.currentTraceId());
+        return ApiResponse.ok(forumService.createReply(id, request), TraceContext.currentTraceId());
     }
 }
-
