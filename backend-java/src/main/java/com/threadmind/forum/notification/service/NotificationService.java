@@ -2,6 +2,7 @@ package com.threadmind.forum.notification.service;
 
 import com.threadmind.forum.common.security.CurrentUserProvider;
 import com.threadmind.forum.notification.dto.NotificationDto;
+import com.threadmind.forum.notification.dto.NotificationUnreadCountResponse;
 import com.threadmind.forum.notification.repository.NotificationRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,12 @@ public class NotificationService {
 
     public List<NotificationDto> listNotifications() {
         return notificationRepository.listByUser(currentUserProvider.currentUserId());
+    }
+
+    public NotificationUnreadCountResponse unreadCount() {
+        return new NotificationUnreadCountResponse(
+                notificationRepository.countUnreadByUser(currentUserProvider.currentUserId())
+        );
     }
 
     public NotificationDto markRead(Long id) {

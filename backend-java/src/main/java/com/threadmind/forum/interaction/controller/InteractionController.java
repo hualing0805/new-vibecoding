@@ -5,6 +5,7 @@ import com.threadmind.forum.common.web.TraceContext;
 import com.threadmind.forum.interaction.dto.InteractionStatusResponse;
 import com.threadmind.forum.interaction.service.InteractionService;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,6 +21,11 @@ public class InteractionController {
         this.interactionService = interactionService;
     }
 
+    @GetMapping("/topics/{id}/interaction-status")
+    public ApiResponse<InteractionStatusResponse> getTopicStatus(@PathVariable Long id) {
+        return ApiResponse.ok(interactionService.getTopicStatus(id), TraceContext.currentTraceId());
+    }
+
     @PostMapping("/topics/{id}/like")
     public ApiResponse<InteractionStatusResponse> likeTopic(@PathVariable Long id) {
         return ApiResponse.ok(interactionService.likeTopic(id), TraceContext.currentTraceId());
@@ -33,6 +39,11 @@ public class InteractionController {
     @PostMapping("/replies/{id}/like")
     public ApiResponse<InteractionStatusResponse> likeReply(@PathVariable Long id) {
         return ApiResponse.ok(interactionService.likeReply(id), TraceContext.currentTraceId());
+    }
+
+    @GetMapping("/replies/{id}/interaction-status")
+    public ApiResponse<InteractionStatusResponse> getReplyStatus(@PathVariable Long id) {
+        return ApiResponse.ok(interactionService.getReplyStatus(id), TraceContext.currentTraceId());
     }
 
     @DeleteMapping("/replies/{id}/like")

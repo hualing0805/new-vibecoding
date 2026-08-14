@@ -41,6 +41,20 @@ public class NotificationRepository {
         return jdbc.query(sql, new MapSqlParameterSource("userId", userId), this::mapNotification);
     }
 
+    public long countUnreadByUser(Long userId) {
+        Long count = jdbc.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM notifications
+                WHERE user_id = :userId
+                  AND read_at IS NULL
+                """,
+                new MapSqlParameterSource("userId", userId),
+                Long.class
+        );
+        return count == null ? 0 : count;
+    }
+
     public NotificationDto createNotification(Long userId, String type, String title, String body) {
         String payload = notificationPayload(title, body);
         KeyHolder keyHolder = new GeneratedKeyHolder();

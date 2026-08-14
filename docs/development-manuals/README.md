@@ -19,3 +19,5 @@
 | M2 收口 | `M2-auth-and-real-flow.md` | 真实 JWT 登录态、前端登录注册、发帖链路守卫 |
 | M2.5 | `M2.5-real-integration-and-tests.md` | 本地联调脚本、核心流程验收、前端错误状态和服务测试 |
 | M3 规划 | `M3-interaction-notification-plan.md` | 互动状态、通知中心、收藏入口和热门排序规划 |
+| M3 | `M3-interaction-notification.md` | 互动状态、通知中心、收藏列表、未读数和通知规则 |
+| M4 规划 | `M4-agent-mvp-audit-plan.md` | AI MVP、Agent Gateway 审计落库和前端 AI 可解释体验规划 |

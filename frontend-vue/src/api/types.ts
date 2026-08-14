@@ -60,6 +60,15 @@ export interface CreatedResource {
   id: number
 }
 
+export interface InteractionStatus {
+  targetType: string
+  targetId: number
+  liked: boolean
+  favorited: boolean
+  likeCount: number
+  favoriteCount: number
+}
+
 export interface AuthUser {
   id: number
   username: string
@@ -108,6 +117,10 @@ export interface NotificationItem {
   body: string
   read: boolean
   createdAt: string
+}
+
+export interface NotificationUnreadCount {
+  unreadCount: number
 }
 
 export interface ReportItem {

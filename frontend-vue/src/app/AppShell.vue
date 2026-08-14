@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { Bot, Bell, Home, LogIn, LogOut, PencilLine, Plus, Search, ShieldCheck } from 'lucide-vue-next'
-import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { onMounted, watch } from 'vue'
+import { Bot, Bell, Bookmark, Home, LogIn, LogOut, PencilLine, Plus, Search, ShieldCheck } from 'lucide-vue-next'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 
 import { useSessionStore } from '../stores/session'
 
 const session = useSessionStore()
 const router = useRouter()
+const route = useRoute()
 
 const navItems = [
   { to: '/', label: '首页', icon: Home },
   { to: '/topics/new', label: '发帖', icon: PencilLine },
+  { to: '/favorites', label: '收藏', icon: Bookmark },
   { to: '/assistant', label: '助手', icon: Bot },
   { to: '/admin', label: '管理', icon: ShieldCheck },
   { to: '/login', label: '登录', icon: LogIn }
@@ -19,6 +22,9 @@ function logout() {
   session.logout()
   router.push('/login')
 }
+
+onMounted(() => void session.refreshUnreadCount())
+watch(() => route.fullPath, () => void session.refreshUnreadCount())
 </script>
 
 <template>
@@ -48,9 +54,10 @@ function logout() {
         </label>
         <div class="top-actions">
           <span v-if="session.isSignedIn" class="session-chip">{{ session.nickname }}</span>
-          <button class="icon-button" type="button" aria-label="通知">
+          <RouterLink class="icon-button" to="/notifications" aria-label="通知">
             <Bell :size="18" aria-hidden="true" />
-          </button>
+            <span v-if="session.unreadCount" class="notification-badge">{{ session.unreadCount > 99 ? '99+' : session.unreadCount }}</span>
+          </RouterLink>
           <button v-if="session.isSignedIn" class="icon-button" type="button" aria-label="退出登录" @click="logout">
             <LogOut :size="18" aria-hidden="true" />
           </button>

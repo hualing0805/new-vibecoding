@@ -3,7 +3,10 @@ package com.threadmind.forum.interaction.repository;
 import com.threadmind.forum.interaction.dto.InteractionStatusResponse;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
 
 @Repository
 public class InteractionRepository {
@@ -42,6 +45,48 @@ public class InteractionRepository {
             jdbc.update("UPDATE topics SET like_count = like_count + 1 WHERE id = :id", new MapSqlParameterSource("id", topicId));
         }
         return topicStatus(userId, topicId);
+    }
+
+    public InteractionStatusResponse getTopicStatus(Long userId, Long topicId) {
+        return topicStatus(userId, topicId);
+    }
+
+    public InteractionStatusResponse getReplyStatus(Long userId, Long replyId) {
+        return replyStatus(userId, replyId);
+    }
+
+    public Optional<Long> findTopicAuthorId(Long topicId) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject(
+                    """
+                    SELECT author_id
+                    FROM topics
+                    WHERE id = :id AND deleted_at IS NULL
+                    LIMIT 1
+                    """,
+                    new MapSqlParameterSource("id", topicId),
+                    Long.class
+            ));
+        } catch (EmptyResultDataAccessException ex) {
+            return Optional.empty();
+        }
+    }
+
+    public Optional<Long> findReplyAuthorId(Long replyId) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject(
+                    """
+                    SELECT author_id
+                    FROM replies
+                    WHERE id = :id AND deleted_at IS NULL
+                    LIMIT 1
+                    """,
+                    new MapSqlParameterSource("id", replyId),
+                    Long.class
+            ));
+        } catch (EmptyResultDataAccessException ex) {
+            return Optional.empty();
+        }
     }
 
     public InteractionStatusResponse unlikeTopic(Long userId, Long topicId) {

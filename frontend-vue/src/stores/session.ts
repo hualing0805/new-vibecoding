@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-import { fetchCurrentUser, loginUser, registerUser } from '../api/forum'
+import { fetchCurrentUser, fetchNotificationUnreadCount, loginUser, registerUser } from '../api/forum'
 import type { AuthResponse, AuthUser } from '../api/types'
 
 export const useSessionStore = defineStore('session', {
@@ -8,7 +8,8 @@ export const useSessionStore = defineStore('session', {
     token: localStorage.getItem('threadmind.token') || '',
     username: localStorage.getItem('threadmind.username') || '',
     nickname: localStorage.getItem('threadmind.nickname') || '演示用户',
-    roles: readRoles()
+    roles: readRoles(),
+    unreadCount: 0
   }),
   getters: {
     isSignedIn: (state) => Boolean(state.token),
@@ -28,10 +29,22 @@ export const useSessionStore = defineStore('session', {
       const user = await fetchCurrentUser()
       this.applyUser(user)
     },
+    async refreshUnreadCount() {
+      if (!this.token) {
+        this.unreadCount = 0
+        return
+      }
+      try {
+        this.unreadCount = (await fetchNotificationUnreadCount()).unreadCount
+      } catch {
+        this.unreadCount = 0
+      }
+    },
     applyAuth(response: AuthResponse) {
       this.token = response.token
       localStorage.setItem('threadmind.token', response.token)
       this.applyUser(response.user)
+      void this.refreshUnreadCount()
     },
     applyUser(user: AuthUser) {
       this.username = user.username
@@ -44,6 +57,7 @@ export const useSessionStore = defineStore('session', {
     logout() {
       this.token = ''
       this.username = ''
+      this.unreadCount = 0
       localStorage.removeItem('threadmind.token')
       localStorage.removeItem('threadmind.username')
       localStorage.removeItem('threadmind.nickname')

@@ -85,4 +85,24 @@ class ForumServiceTest {
                 "Someone replied to your topic."
         );
     }
+
+    @Test
+    void createReplyDoesNotNotifyAuthorWhenReplyingToOwnTopic() {
+        ForumService service = new ForumService(forumRepository, notificationRepository, currentUserProvider);
+        CreateReplyRequest request = new CreateReplyRequest("自回复");
+
+        when(forumRepository.findTopicAuthorId(101L)).thenReturn(Optional.of(7L));
+        when(currentUserProvider.currentUserId()).thenReturn(7L);
+        when(forumRepository.createReply(101L, request, 7L)).thenReturn(203L);
+
+        CreatedResourceResponse response = service.createReply(101L, request);
+
+        assertEquals(203L, response.id());
+        verify(notificationRepository, never()).createNotification(
+                7L,
+                "REPLY_CREATED",
+                "New reply",
+                "Someone replied to your topic."
+        );
+    }
 }

@@ -197,8 +197,25 @@ a:focus-visible {
 }
 
 .icon-button {
+  position: relative;
   width: 42px;
   padding: 0;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  color: #fffefa;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 18px;
+  text-align: center;
+  background: var(--color-vermilion);
+  border-radius: 999px;
 }
 
 .session-chip {
@@ -233,6 +250,12 @@ a:focus-visible {
   background: var(--color-vermilion-dark);
 }
 
+.action-row button.active {
+  color: #fffefa;
+  background: var(--color-teal);
+  border-color: var(--color-teal);
+}
+
 .page-host {
   padding: 28px;
 }
@@ -256,6 +279,12 @@ a:focus-visible {
 
 .detail-layout {
   grid-template-columns: minmax(0, 1fr) 330px;
+}
+
+.single-column-layout {
+  display: grid;
+  max-width: 980px;
+  margin: 0 auto;
 }
 
 .feed-column,
@@ -372,6 +401,56 @@ a:focus-visible {
 .topic-list {
   display: grid;
   gap: 12px;
+}
+
+.empty-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  margin: 0;
+  color: var(--color-muted);
+  font-weight: 800;
+}
+
+.notification-list {
+  display: grid;
+  gap: 10px;
+}
+
+.notification-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+.notification-row.unread {
+  border-color: var(--color-teal);
+  background: #e6f4f1;
+}
+
+.notification-row strong,
+.notification-row p,
+.notification-row small {
+  display: block;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.notification-row p {
+  margin-top: 5px;
+  color: var(--color-muted);
+}
+
+.notification-row small {
+  margin-top: 7px;
+  color: var(--color-muted);
+  font-weight: 700;
 }
 
 .topic-card,

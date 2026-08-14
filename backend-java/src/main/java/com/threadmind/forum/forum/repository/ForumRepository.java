@@ -76,6 +76,10 @@ public class ForumRepository {
     ) {
         MapSqlParameterSource params = new MapSqlParameterSource();
         String where = topicWhereClause(categoryId, keyword, params);
+        if (isUnansweredSort(sort)) {
+            where += " AND t.reply_count = 0\n";
+        }
+        String safeSort = isInternalFavoriteSort(sort) ? "latest" : sort;
         int safePage = Math.max(page, 1);
         int safePageSize = Math.min(Math.max(pageSize, 1), 100);
         int offset = (safePage - 1) * safePageSize;
@@ -88,7 +92,49 @@ public class ForumRepository {
                 Long.class
         );
         List<TopicRow> rows = jdbc.query(
-                topicSelectSql(where, sort) + " LIMIT :limit OFFSET :offset",
+                topicSelectSql(where, safeSort) + " LIMIT :limit OFFSET :offset",
+                params,
+                this::mapTopicRow
+        );
+        return new PageResponse<>(
+                attachTopicTags(rows, false).stream().map(TopicProjection::summary).toList(),
+                safePage,
+                safePageSize,
+                total == null ? 0 : total
+        );
+    }
+
+    public PageResponse<TopicSummaryDto> listFavoriteTopics(Long userId, int page, int pageSize) {
+        MapSqlParameterSource params = new MapSqlParameterSource("favoriteUserId", userId);
+        int safePage = Math.max(page, 1);
+        int safePageSize = Math.min(Math.max(pageSize, 1), 100);
+        int offset = (safePage - 1) * safePageSize;
+        params.addValue("limit", safePageSize);
+        params.addValue("offset", offset);
+
+        Long total = jdbc.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM favorites f
+                JOIN topics t ON t.id = f.topic_id
+                WHERE f.user_id = :favoriteUserId
+                  AND t.deleted_at IS NULL
+                  AND t.status IN ('PUBLISHED', 'LOCKED')
+                """,
+                params,
+                Long.class
+        );
+        List<TopicRow> rows = jdbc.query(
+                topicSelectSql("""
+                        WHERE t.deleted_at IS NULL
+                          AND t.status IN ('PUBLISHED', 'LOCKED')
+                          AND EXISTS (
+                            SELECT 1
+                            FROM favorites f
+                            WHERE f.user_id = :favoriteUserId
+                              AND f.topic_id = t.id
+                          )
+                        """, "favorited") + " LIMIT :limit OFFSET :offset",
                 params,
                 this::mapTopicRow
         );
@@ -322,10 +368,27 @@ public class ForumRepository {
 
     private String orderBy(String sort) {
         return switch (sort == null ? "latest" : sort.trim().toLowerCase(Locale.ROOT)) {
-            case "hottest" -> " ORDER BY (t.like_count * 3 + t.reply_count * 5 + t.view_count) DESC, t.created_at DESC\n";
+            case "hot", "hottest" -> " ORDER BY (t.like_count * 3 + t.reply_count * 5 + t.favorite_count * 4 + t.view_count) DESC, t.created_at DESC\n";
+            case "unanswered" -> " ORDER BY t.created_at DESC\n";
             case "active" -> " ORDER BY COALESCE(t.last_replied_at, t.created_at) DESC, t.created_at DESC\n";
+            case "favorited" -> """
+                     ORDER BY (
+                       SELECT MAX(f.created_at)
+                       FROM favorites f
+                       WHERE f.user_id = :favoriteUserId
+                         AND f.topic_id = t.id
+                     ) DESC, t.created_at DESC
+                    """;
             default -> " ORDER BY t.created_at DESC\n";
         };
+    }
+
+    private boolean isUnansweredSort(String sort) {
+        return "unanswered".equals(sort == null ? "" : sort.trim().toLowerCase(Locale.ROOT));
+    }
+
+    private boolean isInternalFavoriteSort(String sort) {
+        return "favorited".equals(sort == null ? "" : sort.trim().toLowerCase(Locale.ROOT));
     }
 
     private List<TopicProjection> attachTopicTags(List<TopicRow> rows, boolean detail) {

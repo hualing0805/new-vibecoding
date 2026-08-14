@@ -205,12 +205,37 @@
 | --- | --- | --- |
 | POST | `/api/topics/{id}/like` | 点赞帖子 |
 | DELETE | `/api/topics/{id}/like` | 取消点赞 |
+| GET | `/api/topics/{id}/interaction-status` | 当前用户对主题的点赞和收藏状态 |
 | POST | `/api/replies/{id}/like` | 点赞回复 |
 | DELETE | `/api/replies/{id}/like` | 取消点赞回复 |
+| GET | `/api/replies/{id}/interaction-status` | 当前用户对回复的点赞状态 |
 | POST | `/api/topics/{id}/favorite` | 收藏帖子 |
 | DELETE | `/api/topics/{id}/favorite` | 取消收藏 |
+| GET | `/api/users/me/favorites` | 当前用户收藏主题列表 |
 | GET | `/api/notifications` | 通知列表 |
+| GET | `/api/notifications/unread-count` | 当前用户未读通知数量 |
 | POST | `/api/notifications/{id}/read` | 标记已读 |
+
+互动状态响应 `data`：
+
+```json
+{
+  "targetType": "TOPIC",
+  "targetId": 101,
+  "liked": true,
+  "favorited": true,
+  "likeCount": 8,
+  "favoriteCount": 3
+}
+```
+
+未读通知响应 `data`：
+
+```json
+{
+  "unreadCount": 2
+}
+```
 
 ## 6. AI 接口
 

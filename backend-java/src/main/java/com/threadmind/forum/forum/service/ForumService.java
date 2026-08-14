@@ -43,6 +43,10 @@ public class ForumService {
         return forumRepository.listTopics(categoryId, keyword, sort, page, pageSize);
     }
 
+    public PageResponse<TopicSummaryDto> listFavoriteTopics(int page, int pageSize) {
+        return forumRepository.listFavoriteTopics(currentUserProvider.currentUserId(), page, pageSize);
+    }
+
     @Transactional
     public CreatedResourceResponse createTopic(CreateTopicRequest request) {
         if (!forumRepository.categoryExists(request.categoryId())) {
@@ -74,13 +78,16 @@ public class ForumService {
     public CreatedResourceResponse createReply(Long topicId, CreateReplyRequest request) {
         Long topicAuthorId = forumRepository.findTopicAuthorId(topicId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Topic not found"));
-        Long replyId = forumRepository.createReply(topicId, request, currentUserProvider.currentUserId());
-        notificationRepository.createNotification(
-                topicAuthorId,
-                "REPLY_CREATED",
-                "New reply",
-                "Someone replied to your topic."
-        );
+        Long userId = currentUserProvider.currentUserId();
+        Long replyId = forumRepository.createReply(topicId, request, userId);
+        if (!topicAuthorId.equals(userId)) {
+            notificationRepository.createNotification(
+                    topicAuthorId,
+                    "REPLY_CREATED",
+                    "New reply",
+                    "Someone replied to your topic."
+            );
+        }
         return new CreatedResourceResponse(replyId);
     }
 

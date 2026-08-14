@@ -3,9 +3,20 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Bot, Heart, MessageSquare, Send, Star } from 'lucide-vue-next'
 
-import { apiErrorText, createReply, favoriteTopic, fetchReplies, fetchTopic, likeTopic, summarizeTopic } from '../api/forum'
+import {
+  apiErrorText,
+  createReply,
+  favoriteTopic,
+  fetchReplies,
+  fetchTopic,
+  fetchTopicInteractionStatus,
+  likeTopic,
+  summarizeTopic,
+  unfavoriteTopic,
+  unlikeTopic
+} from '../api/forum'
 import { topics as mockTopics } from '../app/mockData'
-import type { Reply, TopicDetail } from '../api/types'
+import type { InteractionStatus, Reply, TopicDetail } from '../api/types'
 
 const route = useRoute()
 const replyText = ref('')
@@ -20,11 +31,36 @@ const summaryPoints = ref<string[]>([])
 const actionError = ref('')
 const replying = ref(false)
 const reacting = ref(false)
+const interactionStatus = ref<InteractionStatus>({
+  targetType: 'TOPIC',
+  targetId: 0,
+  liked: false,
+  favorited: false,
+  likeCount: 0,
+  favoriteCount: 0
+})
 
 async function loadTopic() {
   actionError.value = ''
   topic.value = await fetchTopic(topicId.value)
   topicReplies.value = await fetchReplies(topicId.value)
+  try {
+    interactionStatus.value = await fetchTopicInteractionStatus(topicId.value)
+    topic.value = {
+      ...topic.value,
+      likeCount: interactionStatus.value.likeCount,
+      favoriteCount: interactionStatus.value.favoriteCount
+    }
+  } catch {
+    interactionStatus.value = {
+      targetType: 'TOPIC',
+      targetId: topicId.value,
+      liked: false,
+      favorited: false,
+      likeCount: topic.value.likeCount,
+      favoriteCount: topic.value.favoriteCount
+    }
+  }
   try {
     const aiSummary = await summarizeTopic(topicId.value)
     if (aiSummary.summary) {
@@ -41,8 +77,11 @@ async function like() {
   actionError.value = ''
   reacting.value = true
   try {
-    await likeTopic(topic.value.id)
-    topic.value = { ...topic.value, likeCount: topic.value.likeCount + 1 }
+    const response = interactionStatus.value.liked
+      ? await unlikeTopic(topic.value.id)
+      : await likeTopic(topic.value.id)
+    interactionStatus.value = response
+    topic.value = { ...topic.value, likeCount: response.likeCount, favoriteCount: response.favoriteCount }
   } catch (err) {
     actionError.value = apiErrorText(err, '点赞失败，请确认已登录。')
   } finally {
@@ -54,8 +93,11 @@ async function favorite() {
   actionError.value = ''
   reacting.value = true
   try {
-    await favoriteTopic(topic.value.id)
-    topic.value = { ...topic.value, favoriteCount: topic.value.favoriteCount + 1 }
+    const response = interactionStatus.value.favorited
+      ? await unfavoriteTopic(topic.value.id)
+      : await favoriteTopic(topic.value.id)
+    interactionStatus.value = response
+    topic.value = { ...topic.value, likeCount: response.likeCount, favoriteCount: response.favoriteCount }
   } catch (err) {
     actionError.value = apiErrorText(err, '收藏失败，请确认已登录。')
   } finally {
@@ -105,8 +147,12 @@ watch(topicId, loadTopic)
       </div>
 
       <div class="action-row">
-        <button type="button" :disabled="reacting" @click="like"><Heart :size="17" aria-hidden="true" />点赞 {{ topic.likeCount }}</button>
-        <button type="button" :disabled="reacting" @click="favorite"><Star :size="17" aria-hidden="true" />收藏 {{ topic.favoriteCount }}</button>
+        <button type="button" :class="{ active: interactionStatus.liked }" :disabled="reacting" @click="like">
+          <Heart :size="17" aria-hidden="true" />{{ interactionStatus.liked ? '已点赞' : '点赞' }} {{ topic.likeCount }}
+        </button>
+        <button type="button" :class="{ active: interactionStatus.favorited }" :disabled="reacting" @click="favorite">
+          <Star :size="17" aria-hidden="true" />{{ interactionStatus.favorited ? '已收藏' : '收藏' }} {{ topic.favoriteCount }}
+        </button>
         <button type="button"><MessageSquare :size="17" aria-hidden="true" />回复 {{ topic.replyCount }}</button>
       </div>
       <p v-if="actionError" class="form-error">{{ actionError }}</p>

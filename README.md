@@ -112,7 +112,7 @@ node .\scripts\visual-check.cjs
 
 ## 当前状态
 
-当前仓库处于 M2 收口阶段。三端都已经有基础入口，Java 后端已经从内存 demo 服务切换到 MySQL-backed 的 controller / service / repository 结构，内容、互动、通知、治理、用户登录注册和 Agent 内部工具都会读写本地数据库。登录注册已经接入 HMAC JWT，写接口会从 Bearer token 识别当前用户；前端仍保留 mock fallback，方便后端未启动时继续设计页面。
+当前仓库处于 M3 完成阶段。三端都已经有基础入口，Java 后端已经从内存 demo 服务切换到 MySQL-backed 的 controller / service / repository 结构，内容、互动、通知、治理、用户登录注册和 Agent 内部工具都会读写本地数据库。登录注册已经接入 HMAC JWT，写接口会从 Bearer token 识别当前用户；互动状态、通知中心、未读数和个人收藏入口已经接入真实 API。前端仍保留公开读取的 mock fallback，方便后端未启动时继续设计页面。
 
 本地 seed 演示账号：
 
@@ -122,6 +122,7 @@ password: ThreadMind@123
 ```
 
 每轮开发必须遵守 `docs/development-standard.md`，阶段开发说明见 `docs/development-manuals/`。
+下一阶段 M4 规划见 `docs/development-manuals/M4-agent-mvp-audit-plan.md`。
 
 Java 后端可使用系统 Maven，或使用仓库自带的 `.\.tools\apache-maven\bin\mvn.cmd`。
 

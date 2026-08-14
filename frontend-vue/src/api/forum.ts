@@ -6,8 +6,10 @@ import type {
   AuthUser,
   Category,
   CreatedResource,
+  InteractionStatus,
   ModerationCheckResponse,
   NotificationItem,
+  NotificationUnreadCount,
   PageResponse,
   PolishResponse,
   Reply,
@@ -78,6 +80,16 @@ export function fetchTopics(params: { categoryId?: number | null; sort?: string;
   return requestOr(() => apiClient.get<ApiResponse<PageResponse<TopicSummary>>>('/topics', { params }), fallback)
 }
 
+export function fetchFavoriteTopics(params: { page?: number; pageSize?: number } = {}): Promise<PageResponse<TopicSummary>> {
+  const favoriteItems = mockTopics.filter((topic) => topic.favoriteCount > 0)
+  return requestRequired(() => apiClient.get<ApiResponse<PageResponse<TopicSummary>>>('/users/me/favorites', { params }), {
+    items: favoriteItems,
+    page: params.page || 1,
+    pageSize: params.pageSize || 20,
+    total: favoriteItems.length
+  })
+}
+
 export function fetchTopic(id: number): Promise<TopicDetail> {
   const topic = mockTopics.find((item) => item.id === id) || mockTopics[0]
   const fallback: TopicDetail = {
@@ -100,12 +112,60 @@ export function createReply(topicId: number, content: string): Promise<CreatedRe
   return requestRequired(() => apiClient.post<ApiResponse<CreatedResource>>(`/topics/${topicId}/replies`, { content }), { id: Date.now() })
 }
 
-export function likeTopic(topicId: number) {
-  return requestRequired(() => apiClient.post<ApiResponse<unknown>>(`/topics/${topicId}/like`), {})
+export function fetchTopicInteractionStatus(topicId: number): Promise<InteractionStatus> {
+  const topic = mockTopics.find((item) => item.id === topicId)
+  return requestRequired(() => apiClient.get<ApiResponse<InteractionStatus>>(`/topics/${topicId}/interaction-status`), {
+    targetType: 'TOPIC',
+    targetId: topicId,
+    liked: false,
+    favorited: false,
+    likeCount: topic?.likeCount || 0,
+    favoriteCount: topic?.favoriteCount || 0
+  })
 }
 
-export function favoriteTopic(topicId: number) {
-  return requestRequired(() => apiClient.post<ApiResponse<unknown>>(`/topics/${topicId}/favorite`), {})
+export function likeTopic(topicId: number): Promise<InteractionStatus> {
+  return requestRequired(() => apiClient.post<ApiResponse<InteractionStatus>>(`/topics/${topicId}/like`), {
+    targetType: 'TOPIC',
+    targetId: topicId,
+    liked: true,
+    favorited: false,
+    likeCount: 1,
+    favoriteCount: 0
+  })
+}
+
+export function unlikeTopic(topicId: number): Promise<InteractionStatus> {
+  return requestRequired(() => apiClient.delete<ApiResponse<InteractionStatus>>(`/topics/${topicId}/like`), {
+    targetType: 'TOPIC',
+    targetId: topicId,
+    liked: false,
+    favorited: false,
+    likeCount: 0,
+    favoriteCount: 0
+  })
+}
+
+export function favoriteTopic(topicId: number): Promise<InteractionStatus> {
+  return requestRequired(() => apiClient.post<ApiResponse<InteractionStatus>>(`/topics/${topicId}/favorite`), {
+    targetType: 'TOPIC',
+    targetId: topicId,
+    liked: false,
+    favorited: true,
+    likeCount: 0,
+    favoriteCount: 1
+  })
+}
+
+export function unfavoriteTopic(topicId: number): Promise<InteractionStatus> {
+  return requestRequired(() => apiClient.delete<ApiResponse<InteractionStatus>>(`/topics/${topicId}/favorite`), {
+    targetType: 'TOPIC',
+    targetId: topicId,
+    liked: false,
+    favorited: false,
+    likeCount: 0,
+    favoriteCount: 0
+  })
 }
 
 export function fetchNotifications(): Promise<NotificationItem[]> {
@@ -120,6 +180,23 @@ export function fetchNotifications(): Promise<NotificationItem[]> {
     }
   ]
   return requestRequired(() => apiClient.get<ApiResponse<NotificationItem[]>>('/notifications'), fallback)
+}
+
+export function fetchNotificationUnreadCount(): Promise<NotificationUnreadCount> {
+  return requestRequired(() => apiClient.get<ApiResponse<NotificationUnreadCount>>('/notifications/unread-count'), {
+    unreadCount: 0
+  })
+}
+
+export function markNotificationRead(id: number): Promise<NotificationItem> {
+  return requestRequired(() => apiClient.post<ApiResponse<NotificationItem>>(`/notifications/${id}/read`), {
+    id,
+    type: 'SYSTEM',
+    title: '已读',
+    body: '',
+    read: true,
+    createdAt: new Date().toISOString()
+  })
 }
 
 export function fetchReports(): Promise<ReportItem[]> {
