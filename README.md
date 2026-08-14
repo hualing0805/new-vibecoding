@@ -9,6 +9,7 @@ ThreadMind 是一个以网络论坛为主题的 AI 全栈项目：Java Spring Bo
 - 数据库设计：[docs/database-design.md](docs/database-design.md)
 - 服务边界决策：[docs/adr/0001-service-boundaries.md](docs/adr/0001-service-boundaries.md)
 - 模块设计索引：[docs/modules/README.md](docs/modules/README.md)
+- 开发标准：[docs/development-standard.md](docs/development-standard.md)
 - 开发手册索引：[docs/development-manuals/README.md](docs/development-manuals/README.md)
 - 产品基线：[PRODUCT.md](PRODUCT.md)
 
@@ -110,7 +111,7 @@ username: demo
 password: ThreadMind@123
 ```
 
-每轮阶段开发说明见 `docs/development-manuals/`。
+每轮开发必须遵守 `docs/development-standard.md`，阶段开发说明见 `docs/development-manuals/`。
 
 Java 后端可使用系统 Maven，或使用仓库自带的 `.\.tools\apache-maven\bin\mvn.cmd`。
 
