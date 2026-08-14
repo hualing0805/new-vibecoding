@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { Bot, CornerDownLeft, SearchCheck, UserRound } from 'lucide-vue-next'
 
-import { askAgent } from '../api/forum'
+import { apiErrorText, askAgent } from '../api/forum'
 
 const prompt = ref('最近大家怎么讨论 Agent 和 Java 的边界？')
 const messages = ref([
@@ -13,6 +13,7 @@ const messages = ref([
 ])
 const toolStatus = ref('等待提问')
 const asking = ref(false)
+const error = ref('')
 
 async function ask() {
   if (!prompt.value.trim()) {
@@ -21,16 +22,23 @@ async function ask() {
   const message = prompt.value
   messages.value.push({ role: 'user', text: message })
   asking.value = true
-  const response = await askAgent(message)
-  messages.value.push({
-    role: 'assistant',
-    text: response.answer
-  })
-  toolStatus.value = response.toolCalls.length
-    ? response.toolCalls.map((tool) => `${tool.toolName}:${tool.status}`).join(' / ')
-    : '无工具调用'
-  asking.value = false
-  prompt.value = ''
+  error.value = ''
+  try {
+    const response = await askAgent(message)
+    messages.value.push({
+      role: 'assistant',
+      text: response.answer
+    })
+    toolStatus.value = response.toolCalls.length
+      ? response.toolCalls.map((tool) => `${tool.toolName}:${tool.status}`).join(' / ')
+      : '无工具调用'
+    prompt.value = ''
+  } catch (err) {
+    error.value = apiErrorText(err, '助手请求失败，请确认登录状态和服务可用性。')
+    toolStatus.value = '请求失败'
+  } finally {
+    asking.value = false
+  }
 }
 </script>
 
@@ -59,6 +67,7 @@ async function ask() {
       </div>
 
       <form class="chat-input" @submit.prevent="ask">
+        <p v-if="error" class="form-error">{{ error }}</p>
         <textarea v-model="prompt" rows="3" placeholder="输入问题"></textarea>
         <button class="primary-action" type="submit" :disabled="asking">
           <CornerDownLeft :size="17" aria-hidden="true" />

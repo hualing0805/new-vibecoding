@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Bot, Check, Eye, Sparkles, Tags } from 'lucide-vue-next'
 
-import { createTopic, fetchCategories, moderationCheck, polishDraft as polishDraftApi, suggestTags } from '../api/forum'
+import { apiErrorText, createTopic, fetchCategories, moderationCheck, polishDraft as polishDraftApi, suggestTags } from '../api/forum'
 import { categories as mockCategories } from '../app/mockData'
 import type { Category } from '../api/types'
 
@@ -15,6 +15,7 @@ const selectedTags = ref<string[]>(['Java', 'Agent'])
 const tone = ref('clear')
 const riskText = ref('未发现明显风险，发布前仍保留人工确认。')
 const working = ref(false)
+const error = ref('')
 const router = useRouter()
 
 const suggestedTags = computed(() => {
@@ -32,15 +33,21 @@ const previewHtml = computed(() => {
 })
 
 async function polishDraft() {
+  error.value = ''
   working.value = true
-  const response = await polishDraftApi({
-    title: title.value,
-    content: content.value,
-    tone: tone.value
-  })
-  title.value = response.title
-  content.value = response.content
-  working.value = false
+  try {
+    const response = await polishDraftApi({
+      title: title.value,
+      content: content.value,
+      tone: tone.value
+    })
+    title.value = response.title
+    content.value = response.content
+  } catch (err) {
+    error.value = apiErrorText(err, '润色失败，请确认已登录且 Agent 服务可用。')
+  } finally {
+    working.value = false
+  }
 }
 
 function toggleTag(tag: string) {
@@ -50,29 +57,47 @@ function toggleTag(tag: string) {
 }
 
 async function refreshTags() {
-  const response = await suggestTags({
-    title: title.value,
-    content: content.value,
-    categoryId: categoryId.value
-  })
-  selectedTags.value = response.tags
+  error.value = ''
+  try {
+    const response = await suggestTags({
+      title: title.value,
+      content: content.value,
+      categoryId: categoryId.value
+    })
+    selectedTags.value = response.tags
+  } catch (err) {
+    error.value = apiErrorText(err, '标签推荐失败，请稍后再试。')
+  }
 }
 
 async function checkRisk() {
-  const response = await moderationCheck(content.value)
-  riskText.value = response.riskLevel === 'LOW'
-    ? '未发现明显风险，发布前仍保留人工确认。'
-    : `${response.riskLevel}: ${response.reasons.join('；') || '建议人工复核'}`
+  error.value = ''
+  try {
+    const response = await moderationCheck(content.value)
+    riskText.value = response.riskLevel === 'LOW'
+      ? '未发现明显风险，发布前仍保留人工确认。'
+      : `${response.riskLevel}: ${response.reasons.join('；') || '建议人工复核'}`
+  } catch (err) {
+    error.value = apiErrorText(err, '风险检查失败，请稍后再试。')
+  }
 }
 
 async function publishTopic() {
-  const created = await createTopic({
-    categoryId: categoryId.value,
-    title: title.value,
-    content: content.value,
-    tagNames: selectedTags.value
-  })
-  await router.push(`/topics/${created.id}`)
+  error.value = ''
+  working.value = true
+  try {
+    const created = await createTopic({
+      categoryId: categoryId.value,
+      title: title.value,
+      content: content.value,
+      tagNames: selectedTags.value
+    })
+    await router.push(`/topics/${created.id}`)
+  } catch (err) {
+    error.value = apiErrorText(err, '发布失败，请确认登录状态和后端服务。')
+  } finally {
+    working.value = false
+  }
 }
 
 onMounted(async () => {
@@ -148,6 +173,8 @@ onMounted(async () => {
         <Bot :size="19" aria-hidden="true" />
         <strong>写作辅助</strong>
       </div>
+
+      <p v-if="error" class="form-error">{{ error }}</p>
 
       <label>
         <span>语气</span>

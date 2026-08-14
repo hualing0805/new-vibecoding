@@ -92,6 +92,16 @@ VITE_API_BASE_URL=http://localhost:8080/api
 .\scripts\check.ps1
 ```
 
+M2.5 本地联调脚本：
+
+```powershell
+.\scripts\start-local-stack.ps1
+.\scripts\verify-local-flow.ps1
+.\scripts\stop-local-stack.ps1
+```
+
+`verify-local-flow.ps1` 会验证健康检查、登录、发帖、回复、点赞、收藏、通知、举报和管理处理链路。
+
 前端视觉检查：
 
 ```powershell

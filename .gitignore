@@ -28,4 +28,5 @@ infra/mysql/data/
 logs/
 output/
 .tools/
+ssh
 *.log

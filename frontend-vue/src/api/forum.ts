@@ -27,6 +27,13 @@ async function requestLive<T>(request: () => Promise<{ data: ApiResponse<T> }>):
   return response.data.data
 }
 
+async function requestRequired<T>(request: () => Promise<{ data: ApiResponse<T> }>, fallback: T): Promise<T> {
+  if (!liveApiEnabled) {
+    return fallback
+  }
+  return requestLive(request)
+}
+
 async function requestOr<T>(request: () => Promise<{ data: ApiResponse<T> }>, fallback: T): Promise<T> {
   if (!liveApiEnabled) {
     return fallback
@@ -82,7 +89,7 @@ export function fetchTopic(id: number): Promise<TopicDetail> {
 }
 
 export function createTopic(payload: { categoryId: number; title: string; content: string; tagNames: string[] }): Promise<CreatedResource> {
-  return requestOr(() => apiClient.post<ApiResponse<CreatedResource>>('/topics', payload), { id: Date.now() })
+  return requestRequired(() => apiClient.post<ApiResponse<CreatedResource>>('/topics', payload), { id: Date.now() })
 }
 
 export function fetchReplies(topicId: number): Promise<Reply[]> {
@@ -90,15 +97,15 @@ export function fetchReplies(topicId: number): Promise<Reply[]> {
 }
 
 export function createReply(topicId: number, content: string): Promise<CreatedResource> {
-  return requestOr(() => apiClient.post<ApiResponse<CreatedResource>>(`/topics/${topicId}/replies`, { content }), { id: Date.now() })
+  return requestRequired(() => apiClient.post<ApiResponse<CreatedResource>>(`/topics/${topicId}/replies`, { content }), { id: Date.now() })
 }
 
 export function likeTopic(topicId: number) {
-  return requestOr(() => apiClient.post<ApiResponse<unknown>>(`/topics/${topicId}/like`), {})
+  return requestRequired(() => apiClient.post<ApiResponse<unknown>>(`/topics/${topicId}/like`), {})
 }
 
 export function favoriteTopic(topicId: number) {
-  return requestOr(() => apiClient.post<ApiResponse<unknown>>(`/topics/${topicId}/favorite`), {})
+  return requestRequired(() => apiClient.post<ApiResponse<unknown>>(`/topics/${topicId}/favorite`), {})
 }
 
 export function fetchNotifications(): Promise<NotificationItem[]> {
@@ -112,19 +119,19 @@ export function fetchNotifications(): Promise<NotificationItem[]> {
       createdAt: new Date().toISOString()
     }
   ]
-  return requestOr(() => apiClient.get<ApiResponse<NotificationItem[]>>('/notifications'), fallback)
+  return requestRequired(() => apiClient.get<ApiResponse<NotificationItem[]>>('/notifications'), fallback)
 }
 
 export function fetchReports(): Promise<ReportItem[]> {
-  return requestOr(() => apiClient.get<ApiResponse<ReportItem[]>>('/admin/reports'), mockReports as ReportItem[])
+  return requestRequired(() => apiClient.get<ApiResponse<ReportItem[]>>('/admin/reports'), mockReports as ReportItem[])
 }
 
 export function handleReport(id: number, action: string, note = '') {
-  return requestOr(() => apiClient.post<ApiResponse<unknown>>(`/admin/reports/${id}/handle`, { action, note }), {})
+  return requestRequired(() => apiClient.post<ApiResponse<unknown>>(`/admin/reports/${id}/handle`, { action, note }), {})
 }
 
 export function askAgent(message: string): Promise<AgentChatResponse> {
-  return requestOr(() => apiClient.post<ApiResponse<AgentChatResponse>>('/agent/chat', { message }), {
+  return requestRequired(() => apiClient.post<ApiResponse<AgentChatResponse>>('/agent/chat', { message }), {
     answer: '后端暂未连接，当前显示前端兜底回答：Java 保留业务状态，Python Agent 提供建议。',
     citations: [],
     toolCalls: [{ toolName: 'frontend-fallback', status: 'OK' }]
@@ -132,7 +139,7 @@ export function askAgent(message: string): Promise<AgentChatResponse> {
 }
 
 export function polishDraft(payload: { title: string; content: string; tone: string }): Promise<PolishResponse> {
-  return requestOr(() => apiClient.post<ApiResponse<PolishResponse>>('/agent/polish', payload), {
+  return requestRequired(() => apiClient.post<ApiResponse<PolishResponse>>('/agent/polish', payload), {
     title: 'Agent 与 Java 后端如何配合',
     content: '我想确认论坛项目中的服务边界：哪些业务应该留在 Java 后端，哪些任务适合交给 Python Agent。',
     notes: ['当前为前端兜底润色']
@@ -140,13 +147,13 @@ export function polishDraft(payload: { title: string; content: string; tone: str
 }
 
 export function suggestTags(payload: { title: string; content: string; categoryId: number }): Promise<TagSuggestResponse> {
-  return requestOr(() => apiClient.post<ApiResponse<TagSuggestResponse>>('/agent/suggest-tags', payload), {
+  return requestRequired(() => apiClient.post<ApiResponse<TagSuggestResponse>>('/agent/suggest-tags', payload), {
     tags: ['Java', 'Agent', '架构']
   })
 }
 
 export function summarizeTopic(topicId: number): Promise<TopicSummaryResponse> {
-  return requestOr(() => apiClient.post<ApiResponse<TopicSummaryResponse>>('/agent/summarize-topic', { topicId }), {
+  return requestRequired(() => apiClient.post<ApiResponse<TopicSummaryResponse>>('/agent/summarize-topic', { topicId }), {
     summary: '当前为前端兜底摘要。',
     points: ['Java 负责业务边界', 'Agent 负责建议生成'],
     followUpQuestions: ['是否需要生成引用？']
@@ -154,11 +161,27 @@ export function summarizeTopic(topicId: number): Promise<TopicSummaryResponse> {
 }
 
 export function moderationCheck(content: string): Promise<ModerationCheckResponse> {
-  return requestOr(() => apiClient.post<ApiResponse<ModerationCheckResponse>>('/agent/moderation-check', { targetType: 'TOPIC', content }), {
+  return requestRequired(() => apiClient.post<ApiResponse<ModerationCheckResponse>>('/agent/moderation-check', { targetType: 'TOPIC', content }), {
     riskLevel: 'LOW',
     reasons: [],
     suggestedAction: 'ALLOW'
   })
+}
+
+export function apiErrorText(error: unknown, fallback = '请求失败，请稍后再试。') {
+  if (typeof error === 'object' && error && 'response' in error) {
+    const response = (error as { response?: { status?: number; data?: { message?: string } } }).response
+    if (response?.status === 401) {
+      return '登录已失效，请重新登录。'
+    }
+    if (response?.status === 403) {
+      return '当前账号没有权限执行该操作。'
+    }
+    if (response?.data?.message) {
+      return response.data.message
+    }
+  }
+  return fallback
 }
 
 function filterMockTopics(params: { categoryId?: number | null; sort?: string; keyword?: string }) {

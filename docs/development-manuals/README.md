@@ -17,3 +17,5 @@
 | M0-M1 | `M0-M1-project-baseline.md` | 项目说明、三端骨架、本地拓扑和基础页面 |
 | M2 前半 | `M2-mysql-backed-forum.md` | Java 从内存 demo 切到 MySQL-backed repository/service |
 | M2 收口 | `M2-auth-and-real-flow.md` | 真实 JWT 登录态、前端登录注册、发帖链路守卫 |
+| M2.5 | `M2.5-real-integration-and-tests.md` | 本地联调脚本、核心流程验收、前端错误状态和服务测试 |
+| M3 规划 | `M3-interaction-notification-plan.md` | 互动状态、通知中心、收藏入口和热门排序规划 |

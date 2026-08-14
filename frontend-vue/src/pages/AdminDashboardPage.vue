@@ -2,27 +2,42 @@
 import { computed, onMounted, ref } from 'vue'
 import { CheckCircle2, EyeOff, Lock, ShieldCheck } from 'lucide-vue-next'
 
-import { fetchReports, handleReport } from '../api/forum'
+import { apiErrorText, fetchReports, handleReport } from '../api/forum'
 import type { ReportItem } from '../api/types'
 
 const reports = ref<ReportItem[]>([])
 const selectedReportId = ref<number | null>(null)
+const error = ref('')
+const working = ref(false)
 const pendingCount = computed(() => reports.value.filter((report) => report.status === 'PENDING').length)
 
 async function loadReports() {
-  reports.value = await fetchReports()
-  selectedReportId.value = reports.value[0]?.id || null
+  error.value = ''
+  try {
+    reports.value = await fetchReports()
+    selectedReportId.value = reports.value[0]?.id || null
+  } catch (err) {
+    error.value = apiErrorText(err, '举报列表加载失败，请确认管理员权限。')
+  }
 }
 
 async function moderate(action: string) {
   if (!selectedReportId.value) {
     return
   }
-  await handleReport(selectedReportId.value, action, 'M1 管理台演示处理')
-  reports.value = reports.value.map((report) => report.id === selectedReportId.value
-    ? { ...report, status: action === 'REJECT' ? 'REJECTED' : 'ACCEPTED' }
-    : report
-  )
+  error.value = ''
+  working.value = true
+  try {
+    await handleReport(selectedReportId.value, action, 'M2.5 管理台验收处理')
+    reports.value = reports.value.map((report) => report.id === selectedReportId.value
+      ? { ...report, status: action === 'IGNORE' ? 'REJECTED' : 'ACCEPTED' }
+      : report
+    )
+  } catch (err) {
+    error.value = apiErrorText(err, '处理举报失败，请稍后再试。')
+  } finally {
+    working.value = false
+  }
 }
 
 function displayTime(value: string) {
@@ -48,10 +63,11 @@ onMounted(loadReports)
       </div>
 
       <div class="admin-actions">
-        <button type="button" @click="moderate('ACCEPT')"><CheckCircle2 :size="17" aria-hidden="true" />通过</button>
-        <button type="button" @click="moderate('HIDE')"><EyeOff :size="17" aria-hidden="true" />隐藏</button>
-        <button type="button" @click="moderate('LOCK')"><Lock :size="17" aria-hidden="true" />锁定</button>
+        <button type="button" :disabled="working" @click="moderate('IGNORE')"><CheckCircle2 :size="17" aria-hidden="true" />驳回</button>
+        <button type="button" :disabled="working" @click="moderate('HIDE')"><EyeOff :size="17" aria-hidden="true" />隐藏</button>
+        <button type="button" :disabled="working" @click="moderate('LOCK')"><Lock :size="17" aria-hidden="true" />锁定</button>
       </div>
+      <p v-if="error" class="form-error">{{ error }}</p>
 
       <div class="report-table" role="table" aria-label="举报列表">
         <div class="report-row report-row--head" role="row">

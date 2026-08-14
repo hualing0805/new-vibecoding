@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Bot, Heart, MessageSquare, Send, Star } from 'lucide-vue-next'
 
-import { createReply, favoriteTopic, fetchReplies, fetchTopic, likeTopic, summarizeTopic } from '../api/forum'
+import { apiErrorText, createReply, favoriteTopic, fetchReplies, fetchTopic, likeTopic, summarizeTopic } from '../api/forum'
 import { topics as mockTopics } from '../app/mockData'
 import type { Reply, TopicDetail } from '../api/types'
 
@@ -17,34 +17,68 @@ const topic = ref<TopicDetail>({
 })
 const topicReplies = ref<Reply[]>([])
 const summaryPoints = ref<string[]>([])
+const actionError = ref('')
+const replying = ref(false)
+const reacting = ref(false)
 
 async function loadTopic() {
+  actionError.value = ''
   topic.value = await fetchTopic(topicId.value)
   topicReplies.value = await fetchReplies(topicId.value)
-  const aiSummary = await summarizeTopic(topicId.value)
-  if (aiSummary.summary) {
-    topic.value = { ...topic.value, aiSummary: aiSummary.summary }
-    summaryPoints.value = aiSummary.points
+  try {
+    const aiSummary = await summarizeTopic(topicId.value)
+    if (aiSummary.summary) {
+      topic.value = { ...topic.value, aiSummary: aiSummary.summary }
+      summaryPoints.value = aiSummary.points
+    }
+  } catch {
+    topic.value = { ...topic.value, aiSummary: '登录后可生成 AI 摘要。' }
+    summaryPoints.value = []
   }
 }
 
 async function like() {
-  await likeTopic(topic.value.id)
-  topic.value = { ...topic.value, likeCount: topic.value.likeCount + 1 }
+  actionError.value = ''
+  reacting.value = true
+  try {
+    await likeTopic(topic.value.id)
+    topic.value = { ...topic.value, likeCount: topic.value.likeCount + 1 }
+  } catch (err) {
+    actionError.value = apiErrorText(err, '点赞失败，请确认已登录。')
+  } finally {
+    reacting.value = false
+  }
 }
 
 async function favorite() {
-  await favoriteTopic(topic.value.id)
-  topic.value = { ...topic.value, favoriteCount: topic.value.favoriteCount + 1 }
+  actionError.value = ''
+  reacting.value = true
+  try {
+    await favoriteTopic(topic.value.id)
+    topic.value = { ...topic.value, favoriteCount: topic.value.favoriteCount + 1 }
+  } catch (err) {
+    actionError.value = apiErrorText(err, '收藏失败，请确认已登录。')
+  } finally {
+    reacting.value = false
+  }
 }
 
 async function submitReply() {
   if (!replyText.value.trim()) {
     return
   }
-  await createReply(topic.value.id, replyText.value)
-  replyText.value = ''
-  topicReplies.value = await fetchReplies(topic.value.id)
+  actionError.value = ''
+  replying.value = true
+  try {
+    await createReply(topic.value.id, replyText.value)
+    replyText.value = ''
+    topicReplies.value = await fetchReplies(topic.value.id)
+    topic.value = { ...topic.value, replyCount: topic.value.replyCount + 1 }
+  } catch (err) {
+    actionError.value = apiErrorText(err, '回复失败，请确认已登录。')
+  } finally {
+    replying.value = false
+  }
 }
 
 onMounted(loadTopic)
@@ -71,10 +105,11 @@ watch(topicId, loadTopic)
       </div>
 
       <div class="action-row">
-        <button type="button" @click="like"><Heart :size="17" aria-hidden="true" />点赞 {{ topic.likeCount }}</button>
-        <button type="button" @click="favorite"><Star :size="17" aria-hidden="true" />收藏 {{ topic.favoriteCount }}</button>
+        <button type="button" :disabled="reacting" @click="like"><Heart :size="17" aria-hidden="true" />点赞 {{ topic.likeCount }}</button>
+        <button type="button" :disabled="reacting" @click="favorite"><Star :size="17" aria-hidden="true" />收藏 {{ topic.favoriteCount }}</button>
         <button type="button"><MessageSquare :size="17" aria-hidden="true" />回复 {{ topic.replyCount }}</button>
       </div>
+      <p v-if="actionError" class="form-error">{{ actionError }}</p>
     </article>
 
     <aside class="summary-panel" aria-label="AI 摘要">
@@ -101,9 +136,9 @@ watch(topicId, loadTopic)
 
       <form class="reply-form" @submit.prevent="submitReply">
         <textarea v-model="replyText" rows="4" placeholder="写下回复"></textarea>
-        <button class="primary-action" type="submit">
+        <button class="primary-action" type="submit" :disabled="replying">
           <Send :size="17" aria-hidden="true" />
-          <span>提交回复</span>
+          <span>{{ replying ? '提交中' : '提交回复' }}</span>
         </button>
       </form>
     </section>
