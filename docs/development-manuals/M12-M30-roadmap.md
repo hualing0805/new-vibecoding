@@ -83,4 +83,4 @@
 
 ## 下一阶段建议
 
-M12 优先做 MySQL/Flyway 集成测试方案。先探测本机是否具备 Docker/Testcontainers 条件；如果不稳定，采用本地 MySQL test profile，保证迁移验证能在当前开发机稳定执行。
+M13 进入 Repository 集成测试。优先复用 M12 的测试库 profile 和清库保护策略，先覆盖 AI 审计、摘要缓存、论坛列表、互动状态和通知查询等关键 repository。

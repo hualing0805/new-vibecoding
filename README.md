@@ -113,7 +113,7 @@ node .\scripts\visual-check.cjs
 
 ## 当前状态
 
-当前仓库处于 M11 收口阶段。三端都已经有基础入口，Java 后端已经从内存 demo 服务切换到 MySQL-backed 的 controller / service / repository 结构，内容、互动、通知、治理、用户登录注册、Agent 内部工具、AI 审计和摘要缓存都会读写本地数据库。登录注册已经接入 HMAC JWT，写接口会从 Bearer token 识别当前用户；互动状态、通知中心、未读数和个人收藏入口已经接入真实 API。AI Agent Gateway 会记录会话、消息和工具调用审计，管理员可在管理台查看 AI session、消息和工具调用，普通用户可在助手页查看自己的 AI 历史并续聊。帖子摘要默认读取缓存，手动刷新才重新调用 Agent；Java 侧有单机内存限流和短暂熔断保护。顶部搜索已接入首页关键词查询，治理台支持状态筛选和详情侧栏。M11 已补强 AI 审计查询服务测试，覆盖用户权限边界、管理员详情和工具 JSON 摘要解析。前端仍保留公开读取的 mock fallback，方便后端未启动时继续设计页面。
+当前仓库处于 M12 收口阶段。三端都已经有基础入口，Java 后端已经从内存 demo 服务切换到 MySQL-backed 的 controller / service / repository 结构，内容、互动、通知、治理、用户登录注册、Agent 内部工具、AI 审计和摘要缓存都会读写本地数据库。登录注册已经接入 HMAC JWT，写接口会从 Bearer token 识别当前用户；互动状态、通知中心、未读数和个人收藏入口已经接入真实 API。AI Agent Gateway 会记录会话、消息和工具调用审计，管理员可在管理台查看 AI session、消息和工具调用，普通用户可在助手页查看自己的 AI 历史并续聊。帖子摘要默认读取缓存，手动刷新才重新调用 Agent；Java 侧有单机内存限流和短暂熔断保护。顶部搜索已接入首页关键词查询，治理台支持状态筛选和详情侧栏。M11 已补强 AI 审计查询服务测试，覆盖用户权限边界、管理员详情和工具 JSON 摘要解析。M12 已新增显式 MySQL/Flyway 迁移集成测试入口，默认测试不清库，`mysql-test-bootstrap.sql` 和 `verify-mysql-migrations.ps1` 可用于验证 `threadmind_migration_test` 空库上的 V1-V4 迁移。前端仍保留公开读取的 mock fallback，方便后端未启动时继续设计页面。
 
 本地 seed 演示账号：
 
@@ -123,13 +123,14 @@ password: ThreadMind@123
 ```
 
 每轮开发必须遵守 `docs/development-standard.md`，阶段开发说明见 `docs/development-manuals/`。
-阶段规划和完成记录见 `docs/development-manuals/`，M12-M30 长线路线图见 `docs/development-manuals/M12-M30-roadmap.md`。下一步建议进入 M12，优先评估 MySQL/Flyway 级数据库集成测试和多实例限流方案。
+阶段规划和完成记录见 `docs/development-manuals/`，M12-M30 长线路线图见 `docs/development-manuals/M12-M30-roadmap.md`。下一步建议进入 M13 Repository 集成测试。
 
 Java 后端可使用系统 Maven，或使用仓库自带的 `.\.tools\apache-maven\bin\mvn.cmd`。
 
 ## 已验证
 
 - Java 后端：`..\.tools\apache-maven\bin\mvn.cmd test` 通过，22 个测试成功。
+- MySQL/Flyway 迁移集成测试：在工作区临时 MySQL 9.5 实例上运行 `.\scripts\verify-mysql-migrations.ps1` 通过，V1-V4 迁移成功。
 - Vue 前端：`npm run typecheck` 通过。
 - Vue 前端：`npm run build` 通过。
 - Python Agent：`C:\Users\16378\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe -m pytest tests` 通过。

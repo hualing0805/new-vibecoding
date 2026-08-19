@@ -31,7 +31,7 @@
 | M10 | `M10-regression-test-hardening.md` | 前序 Agent 缓存、限流和熔断测试补强 |
 | M11 | `M11-audit-query-test-hardening.md` | AI 审计查询服务测试、安全边界和查询参数规范化 |
 | M12-M30 总览 | `M12-M30-roadmap.md` | M12 到 M30 的批次划分和阶段手册索引 |
-| M12 | `M12-mysql-flyway-integration-tests.md` | MySQL/Flyway 迁移集成测试方案 |
+| M12 | `M12-mysql-flyway-integration-tests.md` | 本地 MySQL/Flyway 迁移集成测试入口、测试库 bootstrap 和清库保护 |
 | M13 | `M13-repository-integration-tests.md` | Repository 真实数据库集成测试 |
 | M14 | `M14-redis-rate-limit-circuit-breaker.md` | Redis 限流与熔断抽象 |
 | M15 | `M15-ai-sse-streaming.md` | AI SSE 流式响应 |
