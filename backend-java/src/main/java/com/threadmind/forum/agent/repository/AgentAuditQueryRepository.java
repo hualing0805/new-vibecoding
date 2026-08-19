@@ -12,6 +12,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Repository
@@ -162,11 +163,11 @@ public class AgentAuditQueryRepository {
         StringBuilder where = new StringBuilder("WHERE 1 = 1\n");
         if (scene != null && !scene.isBlank()) {
             where.append("  AND s.scene = :scene\n");
-            params.addValue("scene", scene.trim().toUpperCase());
+            params.addValue("scene", scene.trim().toUpperCase(Locale.ROOT));
         }
         if (status != null && !status.isBlank()) {
             where.append("  AND s.status = :status\n");
-            params.addValue("status", status.trim().toUpperCase());
+            params.addValue("status", status.trim().toUpperCase(Locale.ROOT));
         }
         return where.toString();
     }

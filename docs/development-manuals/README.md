@@ -29,3 +29,4 @@
 | M8 | `M8-ai-ops-metrics.md` | AI 运营指标、审计指标卡和管理台可观测入口 |
 | M9 | `M9-release-readiness.md` | 本地验收脚本、文档契约和阶段交付收口 |
 | M10 | `M10-regression-test-hardening.md` | 前序 Agent 缓存、限流和熔断测试补强 |
+| M11 | `M11-audit-query-test-hardening.md` | AI 审计查询服务测试、安全边界和查询参数规范化 |
