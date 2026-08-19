@@ -30,3 +30,4 @@
 | M9 | `M9-release-readiness.md` | 本地验收脚本、文档契约和阶段交付收口 |
 | M10 | `M10-regression-test-hardening.md` | 前序 Agent 缓存、限流和熔断测试补强 |
 | M11 | `M11-audit-query-test-hardening.md` | AI 审计查询服务测试、安全边界和查询参数规范化 |
+| M12-M30 规划 | `M12-M30-roadmap.md` | 数据库集成测试、Redis、流式 AI、RAG、治理运营、安全、部署和 RC 路线图 |

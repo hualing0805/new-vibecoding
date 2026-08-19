@@ -11,6 +11,7 @@ ThreadMind 是一个以网络论坛为主题的 AI 全栈项目：Java Spring Bo
 - 模块设计索引：[docs/modules/README.md](docs/modules/README.md)
 - 开发标准：[docs/development-standard.md](docs/development-standard.md)
 - 开发手册索引：[docs/development-manuals/README.md](docs/development-manuals/README.md)
+- M12-M30 长线路线图：[docs/development-manuals/M12-M30-roadmap.md](docs/development-manuals/M12-M30-roadmap.md)
 - 产品基线：[PRODUCT.md](PRODUCT.md)
 
 ## 目录
@@ -122,7 +123,7 @@ password: ThreadMind@123
 ```
 
 每轮开发必须遵守 `docs/development-standard.md`，阶段开发说明见 `docs/development-manuals/`。
-阶段规划和完成记录见 `docs/development-manuals/`。下一步建议进入 M12，优先评估 MySQL/Flyway 级数据库集成测试和多实例限流方案。
+阶段规划和完成记录见 `docs/development-manuals/`，M12-M30 长线路线图见 `docs/development-manuals/M12-M30-roadmap.md`。下一步建议进入 M12，优先评估 MySQL/Flyway 级数据库集成测试和多实例限流方案。
 
 Java 后端可使用系统 Maven，或使用仓库自带的 `.\.tools\apache-maven\bin\mvn.cmd`。
 
