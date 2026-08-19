@@ -147,6 +147,25 @@ $agentSummary = Invoke-Api -Method "POST" -Path "/agent/summarize-topic" -Token 
 }
 Assert-Ok -Response $agentSummary -Step "agent summarize topic with audit"
 
+$agentSummaryCached = Invoke-Api -Method "POST" -Path "/agent/summarize-topic" -Token $userToken -Body @{
+  topicId = $topicId
+}
+Assert-Ok -Response $agentSummaryCached -Step "agent summarize topic cache read"
+
+$agentSummaryRefresh = Invoke-Api -Method "POST" -Path "/agent/summarize-topic/refresh" -Token $userToken -Body @{
+  topicId = $topicId
+}
+Assert-Ok -Response $agentSummaryRefresh -Step "agent summarize topic refresh"
+
+$myAiSessions = Invoke-Api -Method "GET" -Path "/users/me/ai/sessions" -Token $userToken
+Assert-Ok -Response $myAiSessions -Step "list current user AI sessions"
+
+$myAiSessionItems = @($myAiSessions.data.items)
+if ($myAiSessionItems.Count -gt 0) {
+  $myAiSessionDetail = Invoke-Api -Method "GET" -Path "/users/me/ai/sessions/$($myAiSessionItems[0].sessionId)" -Token $userToken
+  Assert-Ok -Response $myAiSessionDetail -Step "get current user AI session detail"
+}
+
 $report = Invoke-Api -Method "POST" -Path "/reports" -Token $userToken -Body @{
   targetType = "TOPIC"
   targetId = $topicId
@@ -159,9 +178,21 @@ $reportId = $report.data.id
 $reports = Invoke-Api -Method "GET" -Path "/admin/reports" -Token $adminToken
 Assert-Ok -Response $reports -Step "admin list reports"
 
+$adminAiMetrics = Invoke-Api -Method "GET" -Path "/admin/ai/metrics" -Token $adminToken
+Assert-Ok -Response $adminAiMetrics -Step "admin AI metrics"
+
+$adminAiSessions = Invoke-Api -Method "GET" -Path "/admin/ai/sessions" -Token $adminToken
+Assert-Ok -Response $adminAiSessions -Step "admin list AI sessions"
+
+$adminAiSessionItems = @($adminAiSessions.data.items)
+if ($adminAiSessionItems.Count -gt 0) {
+  $adminAiSessionDetail = Invoke-Api -Method "GET" -Path "/admin/ai/sessions/$($adminAiSessionItems[0].sessionId)" -Token $adminToken
+  Assert-Ok -Response $adminAiSessionDetail -Step "admin get AI session detail"
+}
+
 $handled = Invoke-Api -Method "POST" -Path "/admin/reports/$reportId/handle" -Token $adminToken -Body @{
   action = "IGNORE"
-  note = "M3 local verification handled."
+  note = "M10 local verification handled."
 }
 Assert-Ok -Response $handled -Step "admin handle report"
 

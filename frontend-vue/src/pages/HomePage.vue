@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { Activity, Flame, MessageSquareText, RadioTower } from 'lucide-vue-next'
+import { useRoute, useRouter } from 'vue-router'
 
 import AiDock from '../components/AiDock.vue'
 import TopicList from '../components/TopicList.vue'
@@ -12,15 +13,19 @@ const activeCategory = ref<number | null>(null)
 const categories = ref<Category[]>([])
 const topics = ref<TopicSummary[]>([])
 const loading = ref(true)
+const route = useRoute()
+const router = useRouter()
 
 const totalHeat = computed(() => topics.value.reduce((sum, topic) => sum + topic.likeCount, 0))
 const totalAiCalls = computed(() => Math.max(5, categories.value.find((category) => category.slug === 'agent')?.topicCount || 0))
+const activeKeyword = computed(() => typeof route.query.keyword === 'string' ? route.query.keyword.trim() : '')
 
 async function loadTopics() {
   loading.value = true
   const response = await fetchTopics({
     categoryId: activeCategory.value,
-    sort: activeSort.value
+    sort: activeSort.value,
+    keyword: activeKeyword.value
   })
   topics.value = response.items
   loading.value = false
@@ -31,9 +36,13 @@ onMounted(async () => {
   await loadTopics()
 })
 
-watch([activeSort, activeCategory], () => {
+watch([activeSort, activeCategory, activeKeyword], () => {
   void loadTopics()
 })
+
+function clearKeyword() {
+  router.push({ path: '/' })
+}
 </script>
 
 <template>
@@ -74,6 +83,9 @@ watch([activeSort, activeCategory], () => {
           <button :class="{ active: activeSort === 'hot' }" type="button" @click="activeSort = 'hot'">热门</button>
           <button :class="{ active: activeSort === 'unanswered' }" type="button" @click="activeSort = 'unanswered'">待回复</button>
         </div>
+        <button v-if="activeKeyword" class="filter-chip" type="button" @click="clearKeyword">
+          搜索：{{ activeKeyword }}
+        </button>
       </div>
 
       <TopicList :topics="topics" />

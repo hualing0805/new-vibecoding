@@ -23,3 +23,9 @@
 | M4 规划 | `M4-agent-mvp-audit-plan.md` | AI MVP、Agent Gateway 审计落库和前端 AI 可解释体验规划 |
 | M4 | `M4-agent-mvp-audit.md` | AI 审计落库、工具轨迹、前端可解释展示和 fallback 审计 |
 | M5 规划 | `M5-ai-audit-console-plan.md` | AI 审计台、会话历史、摘要缓存和限流规划 |
+| M5 | `M5-ai-audit-console.md` | AI 审计查询、会话历史、摘要缓存、刷新、限流和熔断 |
+| M6 | `M6-global-search-and-assistant-history.md` | 顶部全局搜索、首页关键词联动和助手历史续聊 |
+| M7 | `M7-moderation-operator-console.md` | 管理台治理标签、举报筛选、详情侧栏和人工处理闭环 |
+| M8 | `M8-ai-ops-metrics.md` | AI 运营指标、审计指标卡和管理台可观测入口 |
+| M9 | `M9-release-readiness.md` | 本地验收脚本、文档契约和阶段交付收口 |
+| M10 | `M10-regression-test-hardening.md` | 前序 Agent 缓存、限流和熔断测试补强 |

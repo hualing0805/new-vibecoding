@@ -121,6 +121,54 @@ export interface TopicSummaryResponse {
   sessionId?: number | null
 }
 
+export interface AiSessionListItem {
+  sessionId: number
+  userId: number
+  nickname: string
+  scene: string
+  status: string
+  traceId: string
+  createdAt: string
+  updatedAt: string
+  messageCount: number
+  toolCallCount: number
+}
+
+export interface AiSessionMessage {
+  id: number
+  role: string
+  content: string
+  createdAt: string
+}
+
+export interface AiToolCallDetail {
+  id: number
+  messageId: number
+  toolName: string
+  status: string
+  elapsedMs?: number | null
+  inputSummary: string
+  outputSummary: string
+  errorSummary: string
+  createdAt: string
+}
+
+export interface AiSessionDetail {
+  session: AiSessionListItem
+  messages: AiSessionMessage[]
+  toolCalls: AiToolCallDetail[]
+}
+
+export interface AiAuditMetrics {
+  sessionsToday: number
+  completedToday: number
+  fallbackToday: number
+  toolCallsToday: number
+  failedToolCallsToday: number
+  cachedSummaries: number
+  staleSummaries: number
+}
+
 export interface ModerationCheckResponse {
   riskLevel: string
   reasons: string[]

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Bot, FileSearch, Heart, MessageSquare, Send, Star, Wrench } from 'lucide-vue-next'
+import { Bot, FileSearch, Heart, MessageSquare, RefreshCw, Send, Star, Wrench } from 'lucide-vue-next'
 
 import {
   apiErrorText,
@@ -31,6 +31,7 @@ const summaryPoints = ref<string[]>([])
 const summaryCitations = ref<AgentCitation[]>([])
 const summaryToolCalls = ref<AgentToolCall[]>([])
 const summarySessionId = ref<number | null>(null)
+const summaryLoading = ref(false)
 const actionError = ref('')
 const replying = ref(false)
 const reacting = ref(false)
@@ -64,22 +65,7 @@ async function loadTopic() {
       favoriteCount: topic.value.favoriteCount
     }
   }
-  try {
-    const aiSummary = await summarizeTopic(topicId.value)
-    if (aiSummary.summary) {
-      topic.value = { ...topic.value, aiSummary: aiSummary.summary }
-      summaryPoints.value = aiSummary.points
-      summaryCitations.value = aiSummary.citations || []
-      summaryToolCalls.value = aiSummary.toolCalls || []
-      summarySessionId.value = aiSummary.sessionId ?? null
-    }
-  } catch {
-    topic.value = { ...topic.value, aiSummary: '登录后可生成 AI 摘要。' }
-    summaryPoints.value = []
-    summaryCitations.value = []
-    summaryToolCalls.value = []
-    summarySessionId.value = null
-  }
+  await loadSummary(false)
 }
 
 async function like() {
@@ -132,6 +118,36 @@ async function submitReply() {
   }
 }
 
+async function loadSummary(refresh: boolean) {
+  summaryLoading.value = true
+  try {
+    const aiSummary = await summarizeTopic(topicId.value, refresh)
+    applySummary(aiSummary)
+  } catch (err) {
+    actionError.value = apiErrorText(err, refresh ? '摘要刷新失败，已保留当前内容。' : '登录后可生成 AI 摘要。')
+    if (!topic.value.aiSummary) {
+      topic.value = { ...topic.value, aiSummary: '登录后可生成 AI 摘要。' }
+      summaryPoints.value = []
+      summaryCitations.value = []
+      summaryToolCalls.value = []
+      summarySessionId.value = null
+    }
+  } finally {
+    summaryLoading.value = false
+  }
+}
+
+function applySummary(aiSummary: Awaited<ReturnType<typeof summarizeTopic>>) {
+  if (!aiSummary.summary) {
+    return
+  }
+  topic.value = { ...topic.value, aiSummary: aiSummary.summary }
+  summaryPoints.value = aiSummary.points
+  summaryCitations.value = aiSummary.citations || []
+  summaryToolCalls.value = aiSummary.toolCalls || []
+  summarySessionId.value = aiSummary.sessionId ?? null
+}
+
 onMounted(loadTopic)
 watch(topicId, loadTopic)
 </script>
@@ -168,11 +184,16 @@ watch(topicId, loadTopic)
     </article>
 
     <aside class="summary-panel" aria-label="AI 摘要">
-      <div class="dock-head">
-        <Bot :size="19" aria-hidden="true" />
-        <strong>AI 摘要</strong>
+      <div class="panel-title-row">
+        <div class="dock-head">
+          <Bot :size="19" aria-hidden="true" />
+          <strong>AI 摘要</strong>
+        </div>
+        <button class="icon-button" type="button" :disabled="summaryLoading" aria-label="刷新摘要" @click="loadSummary(true)">
+          <RefreshCw :size="17" aria-hidden="true" />
+        </button>
       </div>
-      <p>{{ topic.aiSummary || '摘要生成中。' }}</p>
+      <p>{{ summaryLoading && !topic.aiSummary ? '摘要生成中。' : topic.aiSummary || '摘要生成中。' }}</p>
       <ul>
         <li v-for="point in summaryPoints" :key="point">{{ point }}</li>
       </ul>

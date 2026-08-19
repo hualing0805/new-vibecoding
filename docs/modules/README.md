@@ -23,10 +23,4 @@ Java 后端是业务事实的唯一入口。它负责权限、状态变化、审
 
 ## 当前实现边界
 
-当前 Java 侧使用内存应用服务保存演示状态，接口和 DTO 已按后续数据库实现设计。这样做有两个原因：
-
-- 先稳定 API 和模块边界，避免前后端并行时反复改契约。
-- 当前环境缺 Maven，无法可靠验证完整 JDBC/MyBatis 编译链，先不写大面积数据库访问代码。
-
-替换为 MySQL Repository 时，Controller 和前端 API 可以保持不变，只替换 Service 内的数据来源。
-
+当前 Java 侧已经切换到 MySQL-backed repository/service 结构。论坛内容、互动、通知、治理、用户登录注册、AI 审计和摘要缓存都会读写本地数据库；前端仍保留 mock fallback，便于后端未启动时继续设计和验证页面。

@@ -49,9 +49,13 @@ public class AgentController {
         return ApiResponse.ok(agentService.summarizeTopic(request), TraceContext.currentTraceId());
     }
 
+    @PostMapping("/summarize-topic/refresh")
+    public ApiResponse<TopicSummaryResponse> refreshTopicSummary(@Valid @RequestBody TopicSummaryRequest request) {
+        return ApiResponse.ok(agentService.summarizeTopic(request, true), TraceContext.currentTraceId());
+    }
+
     @PostMapping("/moderation-check")
     public ApiResponse<ModerationCheckResponse> moderationCheck(@Valid @RequestBody ModerationCheckRequest request) {
         return ApiResponse.ok(agentService.moderationCheck(request), TraceContext.currentTraceId());
     }
 }
-

@@ -112,7 +112,7 @@ node .\scripts\visual-check.cjs
 
 ## 当前状态
 
-当前仓库处于 M4 完成阶段。三端都已经有基础入口，Java 后端已经从内存 demo 服务切换到 MySQL-backed 的 controller / service / repository 结构，内容、互动、通知、治理、用户登录注册和 Agent 内部工具都会读写本地数据库。登录注册已经接入 HMAC JWT，写接口会从 Bearer token 识别当前用户；互动状态、通知中心、未读数和个人收藏入口已经接入真实 API。AI Agent Gateway 已经记录会话、消息和工具调用审计，助手页和帖子摘要区会展示引用、工具状态和 sessionId。前端仍保留公开读取的 mock fallback，方便后端未启动时继续设计页面。
+当前仓库处于 M10 收口阶段。三端都已经有基础入口，Java 后端已经从内存 demo 服务切换到 MySQL-backed 的 controller / service / repository 结构，内容、互动、通知、治理、用户登录注册、Agent 内部工具、AI 审计和摘要缓存都会读写本地数据库。登录注册已经接入 HMAC JWT，写接口会从 Bearer token 识别当前用户；互动状态、通知中心、未读数和个人收藏入口已经接入真实 API。AI Agent Gateway 会记录会话、消息和工具调用审计，管理员可在管理台查看 AI session、消息和工具调用，普通用户可在助手页查看自己的 AI 历史并续聊。帖子摘要默认读取缓存，手动刷新才重新调用 Agent；Java 侧有单机内存限流和短暂熔断保护。顶部搜索已接入首页关键词查询，治理台支持状态筛选和详情侧栏。前端仍保留公开读取的 mock fallback，方便后端未启动时继续设计页面。
 
 本地 seed 演示账号：
 
@@ -122,14 +122,14 @@ password: ThreadMind@123
 ```
 
 每轮开发必须遵守 `docs/development-standard.md`，阶段开发说明见 `docs/development-manuals/`。
-下一阶段 M5 规划见 `docs/development-manuals/M5-ai-audit-console-plan.md`。
+阶段规划和完成记录见 `docs/development-manuals/`。下一步建议进入 M11，优先补 Testcontainers 级数据库集成测试和多实例限流方案。
 
 Java 后端可使用系统 Maven，或使用仓库自带的 `.\.tools\apache-maven\bin\mvn.cmd`。
 
 ## 已验证
 
-- Python Agent：`python -m pytest tests` 通过。
+- Java 后端：`..\.tools\apache-maven\bin\mvn.cmd test` 通过。
 - Vue 前端：`npm run typecheck` 通过。
 - Vue 前端：`npm run build` 通过。
-- 视觉检查：`node .\scripts\visual-check.cjs` 覆盖桌面和移动端核心路由，无横向溢出。
-- Java 后端：`mvn test` 通过。
+- Python Agent：`C:\Users\16378\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe -m pytest tests` 通过。
+- 视觉检查：`node .\scripts\visual-check.cjs` 覆盖桌面和移动端核心路由，无横向溢出；另以 mock 登录态检查 `/assistant`、`/admin` 和 AI 审计标签，无横向溢出。

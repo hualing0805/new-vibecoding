@@ -1,7 +1,7 @@
 # API 契约草案
 
 版本：v0.1  
-适用阶段：M1-M4
+适用阶段：M1-M10
 
 ## 1. 基础约定
 
@@ -240,7 +240,7 @@
 ## 6. AI 接口
 
 Java 对前端暴露 `/api/agent/**`，Java 内部调用 Python `/agent/**`。
-M4 起 Java Agent Gateway 会把 AI 会话、用户消息、助手消息和工具调用摘要写入 `ai_sessions`、`ai_messages`、`ai_tool_calls`，前端响应会返回 `sessionId` 方便排查。
+M4 起 Java Agent Gateway 会把 AI 会话、用户消息、助手消息和工具调用摘要写入 `ai_sessions`、`ai_messages`、`ai_tool_calls`，前端响应会返回 `sessionId` 方便排查。M5 起帖子摘要默认读取 `topic_ai_summaries` 缓存，刷新接口才重新调用 Agent；AI 接口具备单机内存限流和短暂熔断保护。
 
 ### POST `/api/agent/chat`
 
@@ -316,6 +316,12 @@ M4 起 Java Agent Gateway 会把 AI 会话、用户消息、助手消息和工�
 
 返回摘要、主要观点、可继续追问的问题、引用和工具调用轨迹。
 
+默认行为：
+
+- 如果存在未过期缓存，返回缓存摘要，`toolCalls[0].toolName=summary-cache`。
+- 如果没有缓存，Java 调用 Python Agent，成功后写入新缓存。
+- 如果 Agent 失败且存在旧缓存，返回旧缓存并附加失败工具摘要。
+
 响应 `data`：
 
 ```json
@@ -341,6 +347,10 @@ M4 起 Java Agent Gateway 会把 AI 会话、用户消息、助手消息和工�
   "sessionId": 502
 }
 ```
+
+### POST `/api/agent/summarize-topic/refresh`
+
+请求同 `/api/agent/summarize-topic`。该接口跳过新鲜缓存，尝试重新调用 Agent 并写入新缓存；如果刷新失败，优先返回旧缓存，不覆盖旧摘要。
 
 ### POST `/api/agent/moderation-check`
 
@@ -427,7 +437,67 @@ Python 返回结构必须能被 Java 反序列化。模型原始自然语言不�
 
 设计意图：摘要和问答需要上下文，但上下文应由 Java 选择和脱敏。
 
-## 8. 模块设计说明
+## 8. AI 审计与历史接口
+
+### GET `/api/admin/ai/metrics`
+
+需要 `ADMIN` 或 `MODERATOR`。响应 `data`：
+
+```json
+{
+  "sessionsToday": 8,
+  "completedToday": 6,
+  "fallbackToday": 1,
+  "toolCallsToday": 14,
+  "failedToolCallsToday": 1,
+  "cachedSummaries": 3,
+  "staleSummaries": 0
+}
+```
+
+### GET `/api/admin/ai/sessions`
+
+需要 `ADMIN` 或 `MODERATOR`。
+
+查询参数：
+
+| 参数 | 说明 |
+| --- | --- |
+| `scene` | 可选，如 `CHAT`、`SUMMARY` |
+| `status` | 可选，如 `COMPLETED`、`FALLBACK` |
+| `page` | 页码，默认 1 |
+| `pageSize` | 每页条数，默认 20，最大 100 |
+
+响应 `data` 为分页结构，`items` 内元素：
+
+```json
+{
+  "sessionId": 501,
+  "userId": 1,
+  "nickname": "演示用户",
+  "scene": "CHAT",
+  "status": "COMPLETED",
+  "traceId": "req-20260819-001",
+  "createdAt": "2026-08-19T10:00:00Z",
+  "updatedAt": "2026-08-19T10:00:05Z",
+  "messageCount": 2,
+  "toolCallCount": 1
+}
+```
+
+### GET `/api/admin/ai/sessions/{id}`
+
+返回 session 基本信息、消息列表和工具调用详情。工具输入输出只返回摘要字段，不返回内部 token 或完整堆栈。
+
+### GET `/api/users/me/ai/sessions`
+
+返回当前用户自己的 AI session 分页列表。普通用户不能查看他人的 session。
+
+### GET `/api/users/me/ai/sessions/{id}`
+
+返回当前用户自己的 AI session 详情。不存在或不属于当前用户时返回 404。
+
+## 9. 模块设计说明
 
 每个模块的设计理念和功能取舍见：
 

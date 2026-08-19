@@ -1,5 +1,8 @@
 import { apiClient } from './client'
 import type {
+  AiAuditMetrics,
+  AiSessionDetail,
+  AiSessionListItem,
   AgentChatResponse,
   ApiResponse,
   AuthResponse,
@@ -199,20 +202,51 @@ export function markNotificationRead(id: number): Promise<NotificationItem> {
   })
 }
 
-export function fetchReports(): Promise<ReportItem[]> {
-  return requestRequired(() => apiClient.get<ApiResponse<ReportItem[]>>('/admin/reports'), mockReports as ReportItem[])
+export function fetchReports(status?: string): Promise<ReportItem[]> {
+  const fallback = status
+    ? (mockReports as ReportItem[]).filter((report) => report.status === status)
+    : mockReports as ReportItem[]
+  return requestRequired(() => apiClient.get<ApiResponse<ReportItem[]>>('/admin/reports', { params: { status } }), fallback)
 }
 
 export function handleReport(id: number, action: string, note = '') {
   return requestRequired(() => apiClient.post<ApiResponse<unknown>>(`/admin/reports/${id}/handle`, { action, note }), {})
 }
 
-export function askAgent(message: string): Promise<AgentChatResponse> {
-  return requestRequired(() => apiClient.post<ApiResponse<AgentChatResponse>>('/agent/chat', { message }), {
+export function fetchAdminAiSessions(params: { scene?: string; status?: string; page?: number; pageSize?: number } = {}): Promise<PageResponse<AiSessionListItem>> {
+  return requestRequired(() => apiClient.get<ApiResponse<PageResponse<AiSessionListItem>>>('/admin/ai/sessions', { params }), mockAiSessions(params.pageSize || 12))
+}
+
+export function fetchAdminAiSession(id: number): Promise<AiSessionDetail> {
+  return requestRequired(() => apiClient.get<ApiResponse<AiSessionDetail>>(`/admin/ai/sessions/${id}`), mockAiSessionDetail(id))
+}
+
+export function fetchAdminAiMetrics(): Promise<AiAuditMetrics> {
+  return requestRequired(() => apiClient.get<ApiResponse<AiAuditMetrics>>('/admin/ai/metrics'), {
+    sessionsToday: 6,
+    completedToday: 4,
+    fallbackToday: 1,
+    toolCallsToday: 12,
+    failedToolCallsToday: 1,
+    cachedSummaries: 3,
+    staleSummaries: 0
+  })
+}
+
+export function fetchMyAiSessions(params: { page?: number; pageSize?: number } = {}): Promise<PageResponse<AiSessionListItem>> {
+  return requestRequired(() => apiClient.get<ApiResponse<PageResponse<AiSessionListItem>>>('/users/me/ai/sessions', { params }), mockAiSessions(params.pageSize || 8))
+}
+
+export function fetchMyAiSession(id: number): Promise<AiSessionDetail> {
+  return requestRequired(() => apiClient.get<ApiResponse<AiSessionDetail>>(`/users/me/ai/sessions/${id}`), mockAiSessionDetail(id))
+}
+
+export function askAgent(message: string, sessionId?: number | null): Promise<AgentChatResponse> {
+  return requestRequired(() => apiClient.post<ApiResponse<AgentChatResponse>>('/agent/chat', { message, sessionId }), {
     answer: '后端暂未连接，当前显示前端兜底回答：Java 保留业务状态和审计，Python Agent 提供建议。',
     citations: mockTopics.slice(0, 2).map((topic) => ({ topicId: topic.id, title: topic.title })),
     toolCalls: [{ toolName: 'frontend-fallback', status: 'OK', elapsedMs: 0, summary: 'mock response' }],
-    sessionId: null
+    sessionId: sessionId || 8801
   })
 }
 
@@ -230,15 +264,16 @@ export function suggestTags(payload: { title: string; content: string; categoryI
   })
 }
 
-export function summarizeTopic(topicId: number): Promise<TopicSummaryResponse> {
+export function summarizeTopic(topicId: number, refresh = false): Promise<TopicSummaryResponse> {
   const topic = mockTopics.find((item) => item.id === topicId)
-  return requestRequired(() => apiClient.post<ApiResponse<TopicSummaryResponse>>('/agent/summarize-topic', { topicId }), {
-    summary: '当前为前端兜底摘要。',
+  const path = refresh ? '/agent/summarize-topic/refresh' : '/agent/summarize-topic'
+  return requestRequired(() => apiClient.post<ApiResponse<TopicSummaryResponse>>(path, { topicId }), {
+    summary: refresh ? '已刷新前端兜底摘要。' : '当前为前端兜底摘要。',
     points: ['Java 负责业务边界', 'Agent 负责建议生成'],
     followUpQuestions: ['是否需要生成引用？'],
     citations: topic ? [{ topicId: topic.id, title: topic.title }] : [],
-    toolCalls: [{ toolName: 'frontend-fallback', status: 'OK', elapsedMs: 0, summary: 'mock summary' }],
-    sessionId: null
+    toolCalls: [{ toolName: refresh ? 'frontend-refresh' : 'summary-cache', status: 'OK', elapsedMs: 0, summary: 'mock summary' }],
+    sessionId: refresh ? 9902 : null
   })
 }
 
@@ -290,5 +325,66 @@ function mockAuthResponse(username: string, nickname = username || '演示用户
       avatarUrl: '',
       roles: ['USER', 'ADMIN']
     }
+  }
+}
+
+function mockAiSessions(pageSize: number): PageResponse<AiSessionListItem> {
+  const now = new Date().toISOString()
+  const items: AiSessionListItem[] = [
+    {
+      sessionId: 8801,
+      userId: 1,
+      nickname: '演示用户',
+      scene: 'CHAT',
+      status: 'COMPLETED',
+      traceId: 'mock-ai-chat',
+      createdAt: now,
+      updatedAt: now,
+      messageCount: 4,
+      toolCallCount: 2
+    },
+    {
+      sessionId: 8802,
+      userId: 1,
+      nickname: '演示用户',
+      scene: 'SUMMARY',
+      status: 'FALLBACK',
+      traceId: 'mock-ai-summary',
+      createdAt: now,
+      updatedAt: now,
+      messageCount: 2,
+      toolCallCount: 1
+    }
+  ].slice(0, pageSize)
+  return {
+    items,
+    page: 1,
+    pageSize,
+    total: items.length
+  }
+}
+
+function mockAiSessionDetail(id: number): AiSessionDetail {
+  const now = new Date().toISOString()
+  const session = mockAiSessions(8).items.find((item) => item.sessionId === id) || mockAiSessions(1).items[0]
+  return {
+    session: { ...session, sessionId: id },
+    messages: [
+      { id: id * 10 + 1, role: 'USER', content: 'Agent 和 Java 的边界怎么划分？', createdAt: now },
+      { id: id * 10 + 2, role: 'ASSISTANT', content: 'Java 保留权限、事务和审计，Python Agent 通过受控工具读取上下文。', createdAt: now }
+    ],
+    toolCalls: [
+      {
+        id: id * 100 + 1,
+        messageId: id * 10 + 2,
+        toolName: 'search_topics',
+        status: session.status === 'FALLBACK' ? 'UNAVAILABLE' : 'OK',
+        elapsedMs: 18,
+        inputSummary: 'keyword=Agent Java',
+        outputSummary: 'found 2 topics',
+        errorSummary: session.status === 'FALLBACK' ? 'mock unavailable' : '',
+        createdAt: now
+      }
+    ]
   }
 }

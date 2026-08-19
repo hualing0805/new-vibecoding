@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { Bot, Bell, Bookmark, Home, LogIn, LogOut, PencilLine, Plus, Search, ShieldCheck } from 'lucide-vue-next'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 
@@ -8,6 +8,7 @@ import { useSessionStore } from '../stores/session'
 const session = useSessionStore()
 const router = useRouter()
 const route = useRoute()
+const searchKeyword = ref('')
 
 const navItems = [
   { to: '/', label: '首页', icon: Home },
@@ -23,8 +24,16 @@ function logout() {
   router.push('/login')
 }
 
+function submitSearch() {
+  const keyword = searchKeyword.value.trim()
+  router.push({ path: '/', query: keyword ? { keyword } : {} })
+}
+
 onMounted(() => void session.refreshUnreadCount())
 watch(() => route.fullPath, () => void session.refreshUnreadCount())
+watch(() => route.query.keyword, (keyword) => {
+  searchKeyword.value = typeof keyword === 'string' ? keyword : ''
+}, { immediate: true })
 </script>
 
 <template>
@@ -48,10 +57,10 @@ watch(() => route.fullPath, () => void session.refreshUnreadCount())
 
     <div class="workspace">
       <header class="top-bar">
-        <label class="search-box">
+        <form class="search-box" role="search" @submit.prevent="submitSearch">
           <Search :size="18" aria-hidden="true" />
-          <input placeholder="搜索帖子、标签、作者" />
-        </label>
+          <input v-model="searchKeyword" placeholder="搜索帖子、标签、作者" />
+        </form>
         <div class="top-actions">
           <span v-if="session.isSignedIn" class="session-chip">{{ session.nickname }}</span>
           <RouterLink class="icon-button" to="/notifications" aria-label="通知">

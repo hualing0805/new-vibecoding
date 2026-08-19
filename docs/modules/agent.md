@@ -13,6 +13,9 @@ Agent 模块负责把 AI 能力接入论坛，但不让 AI 绕过业务规则。
 - 内容风险提示。
 - 内部工具：搜索帖子、读取帖子上下文。
 - 审计落库：记录 AI session、用户消息、助手消息和工具调用摘要。
+- 审计查询：管理员可查全站 AI session，用户可查自己的 AI 历史。
+- 摘要缓存：帖子摘要写入 `topic_ai_summaries`，默认命中缓存，刷新时重新生成。
+- 保护能力：Java 网关按用户 + 场景限流，按场景连续失败短暂熔断。
 
 ## 设计思路
 
@@ -21,6 +24,8 @@ Java 对前端暴露 `/api/agent/**`，Python 只接受 Java 内部调用。这�
 Python Agent 不直接连接 MySQL。它通过 Java 的内部工具接口拿到授权后的帖子和回复。这个约束比开发速度更重要，因为论坛内容天然涉及隐私、隐藏状态和治理备注。
 
 M4 起，Java Agent Gateway 也是 AI 审计边界。Python 只返回 `answer`、`citations`、`toolCalls` 等结构化结果；Java 负责把可保存的摘要写入 `ai_sessions`、`ai_messages`、`ai_tool_calls`。审计失败不会阻断前端响应，但要写日志，便于后续排查。
+
+M5 起，AI 调用还要经过 Java 侧保护层。限流失败返回 429，不调用 Python；连续失败触发短暂熔断，熔断期间返回 fallback 并写 `FALLBACK` 审计。这个实现是单机内存版，适合本地开发，生产多实例需要迁移到 Redis、网关或集中式限流组件。
 
 ## 功能设计
 
@@ -57,6 +62,23 @@ M4 返回内容包含：
 
 M4 摘要响应同样返回引用、工具调用和 `sessionId`。前端详情页应展示这些轨迹，让用户知道摘要来自哪个上下文。
 
+M5 起摘要优先读取缓存。缓存命中时不会调用 Python Agent，工具轨迹显示 `summary-cache`；手动刷新才调用 `/api/agent/summarize-topic/refresh`。刷新失败时保留旧缓存，避免详情页体验因为 Agent 波动而退化。
+
+### 审计后台与用户历史
+
+管理员接口：
+
+- `GET /api/admin/ai/metrics`
+- `GET /api/admin/ai/sessions`
+- `GET /api/admin/ai/sessions/{id}`
+
+用户接口：
+
+- `GET /api/users/me/ai/sessions`
+- `GET /api/users/me/ai/sessions/{id}`
+
+设计理念：管理员看全站调用和工具错误，用于排查；普通用户只看自己的历史，用于续聊和理解 AI 输出来源。
+
 ### 风险提示
 
 输入内容，返回风险等级、原因和建议动作。
@@ -82,4 +104,4 @@ M4 摘要响应同样返回引用、工具调用和 `sessionId`。前端详情�
 - 模型返回需要 schema 校验。
 - 支持无模型 Key 时的 mock 响应，保证本地开发不断。
 - 正式环境要继续加强 prompt、工具输入和输出脱敏。
-- M5 建议补 AI 审计后台、会话历史、摘要缓存和基础限流。
+- 后续建议把限流迁移到 Redis 或网关层，并增加数据库级 repository 集成测试。
