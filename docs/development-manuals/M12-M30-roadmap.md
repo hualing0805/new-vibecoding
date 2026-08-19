@@ -2,7 +2,7 @@
 
 ## 路线图定位
 
-本路线图用于把 ThreadMind 从当前 M11 的本地可运行全栈项目，推进到一个具备稳定测试、可观测、可部署、可持续演进能力的 AI 论坛产品原型。M12-M30 不要求一次性全部实现；每进入一个阶段，都必须新增或更新对应阶段手册，并按 `docs/development-standard.md` 完成验证、提交和推送。
+本路线图用于把 ThreadMind 从当前 M11 的本地可运行全栈项目，推进到一个具备稳定测试、可观测、可部署、可持续演进能力的 AI 论坛产品原型。M12-M30 不再把每个阶段的详细 README 放在一个文件里；本文件只保留总览、批次和索引，具体准入、范围、验收和风险以对应阶段手册为准。
 
 ## 总体原则
 
@@ -12,29 +12,29 @@
 - 新基础设施先本地可运行，再考虑生产部署；Redis、CI、Docker、观测等都要有降级方案。
 - 每阶段都要留下可执行验收命令，不能只写设计描述。
 
-## 阶段路线
+## 阶段索引
 
-| 阶段 | 主题 | 目标 | 主要范围 | 验收重点 |
-| --- | --- | --- | --- | --- |
-| M12 | MySQL/Flyway 集成测试方案 | 证明 V1-V4 迁移可在空库完整运行 | 评估 Testcontainers MySQL；若 Docker 不稳定，则建立本地 MySQL test profile；覆盖 Flyway migrate 和基础连接 | 迁移测试可重复执行；失败原因可定位 |
-| M13 | Repository 集成测试 | 让关键 SQL 不只靠 Mockito 保护 | 覆盖 AI 审计、摘要缓存、论坛列表、互动状态、通知查询 repository | 关键 repository 测试能读写真实测试库 |
-| M14 | Redis 限流与熔断抽象 | 从单机内存保护升级为可替换实现 | 新增限流/熔断接口；保留内存实现；增加 Redis 可选实现和 `infra` 配置 | 无 Redis 时仍可运行；有 Redis 时多实例共享状态 |
-| M15 | AI SSE 流式响应 | 让站内助手支持流式回答体验 | Java `/api/agent/chat/stream`；Python Agent 流式协议；Vue 消息流式渲染 | 非流式接口不回归；断流可 fallback |
-| M16 | 知识库与 RAG 基线 | 支持站内文档/规则检索，而不绕过 Java 边界 | 文档表、导入脚本、检索接口、Agent 工具；暂不做复杂多模型路由 | 文档检索结果可引用、可审计 |
-| M17 | 搜索 2.0 | 把顶部搜索升级为真正的站内检索页 | 搜索结果页、标签/作者/回复维度、MySQL fulltext 或索引优化 | 搜索可分页、可筛选、无登录也可用 |
-| M18 | 实时通知 | 让通知从刷新查询走向实时提醒 | Java SSE 或 WebSocket；前端通知订阅；通知已读同步 | 断开重连正常；未读数不乱跳 |
-| M19 | 草稿与编辑器版本 | 提升发帖工作流可靠性 | 草稿自动保存、草稿列表、编辑历史、AI 润色记录 | 刷新页面不丢草稿；AI 建议可回看 |
-| M20 | 治理 V2 | 细化版主权限和处理流程 | 板块版主、处理分派、申诉入口、处理记录筛选 | 版主只能处理授权板块；管理员可全站处理 |
-| M21 | 管理观测台 | 把健康、错误和 AI 状态集中呈现 | 管理台健康页、Java/Agent 连接状态、近期错误摘要、traceId 查询入口 | 常见故障能在管理台定位到入口 |
-| M22 | 用户主页与关系 | 补齐社区身份和用户内容归档 | 用户主页、发帖/回复列表、关注用户/板块、个人收藏扩展 | 游客可看公开主页；隐私字段不泄漏 |
-| M23 | 分类与标签运营 | 让管理员能维护内容结构 | 分类 CRUD、标签合并、热门标签、推荐标签审核 | 内容结构变更有权限和审计 |
-| M24 | AI 成本与配额治理 | 控制 AI 调用成本和滥用风险 | 用户/场景配额、调用统计、成本字段、管理员配额配置 | 超额明确返回；审计可解释 |
-| M25 | 安全加固 | 系统性处理认证、授权和敏感数据风险 | 刷新 token、密码重置、权限测试、错误脱敏、安全文档 | 常见越权和敏感信息泄漏有测试覆盖 |
-| M26 | 性能与分页治理 | 面向中等数据量优化体验和 SQL | 慢查询梳理、索引补充、分页一致性、负载脚本 | 核心列表在 seed 大数据下仍稳定 |
-| M27 | 部署打包 | 让三端和依赖能一键部署到本地/测试环境 | Dockerfile、compose profile、环境检查脚本、生产构建说明 | 新机器按文档可启动完整栈 |
-| M28 | CI/CD 质量门禁 | 把本地检查迁移到 GitHub Actions | Java test、Vue typecheck/build、Python pytest、迁移检查、文档检查 | PR 或 push 自动验证核心质量 |
-| M29 | 产品体验与可访问性收口 | 做一次面向真实使用的 UI/UX 打磨 | 键盘导航、焦点、空状态、移动端治理降级、文案统一 | 核心路由视觉检查无溢出；关键操作可键盘完成 |
-| M30 | Release Candidate | 形成可演示、可复盘的候选版本 | 全链路验收、版本说明、已知风险、演示脚本、回滚方案 | M0-M30 手册闭环；一键验收脚本通过 |
+| 阶段 | 主题 | 手册 |
+| --- | --- | --- |
+| M12 | MySQL/Flyway 集成测试方案 | `M12-mysql-flyway-integration-tests.md` |
+| M13 | Repository 集成测试 | `M13-repository-integration-tests.md` |
+| M14 | Redis 限流与熔断抽象 | `M14-redis-rate-limit-circuit-breaker.md` |
+| M15 | AI SSE 流式响应 | `M15-ai-sse-streaming.md` |
+| M16 | 知识库与 RAG 基线 | `M16-knowledge-rag-baseline.md` |
+| M17 | 搜索 2.0 | `M17-search-v2.md` |
+| M18 | 实时通知 | `M18-realtime-notifications.md` |
+| M19 | 草稿与编辑器版本 | `M19-drafts-editor-versioning.md` |
+| M20 | 治理 V2 | `M20-moderation-v2.md` |
+| M21 | 管理观测台 | `M21-admin-observability-console.md` |
+| M22 | 用户主页与关系 | `M22-user-profile-relations.md` |
+| M23 | 分类与标签运营 | `M23-category-tag-operations.md` |
+| M24 | AI 成本与配额治理 | `M24-ai-cost-quota-governance.md` |
+| M25 | 安全加固 | `M25-security-hardening.md` |
+| M26 | 性能与分页治理 | `M26-performance-pagination-governance.md` |
+| M27 | 部署打包 | `M27-deployment-packaging.md` |
+| M28 | CI/CD 质量门禁 | `M28-ci-cd-quality-gates.md` |
+| M29 | 产品体验与可访问性收口 | `M29-product-accessibility-polish.md` |
+| M30 | Release Candidate | `M30-release-candidate.md` |
 
 ## 推荐批次
 

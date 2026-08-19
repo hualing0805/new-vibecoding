@@ -30,4 +30,23 @@
 | M9 | `M9-release-readiness.md` | 本地验收脚本、文档契约和阶段交付收口 |
 | M10 | `M10-regression-test-hardening.md` | 前序 Agent 缓存、限流和熔断测试补强 |
 | M11 | `M11-audit-query-test-hardening.md` | AI 审计查询服务测试、安全边界和查询参数规范化 |
-| M12-M30 规划 | `M12-M30-roadmap.md` | 数据库集成测试、Redis、流式 AI、RAG、治理运营、安全、部署和 RC 路线图 |
+| M12-M30 总览 | `M12-M30-roadmap.md` | M12 到 M30 的批次划分和阶段手册索引 |
+| M12 | `M12-mysql-flyway-integration-tests.md` | MySQL/Flyway 迁移集成测试方案 |
+| M13 | `M13-repository-integration-tests.md` | Repository 真实数据库集成测试 |
+| M14 | `M14-redis-rate-limit-circuit-breaker.md` | Redis 限流与熔断抽象 |
+| M15 | `M15-ai-sse-streaming.md` | AI SSE 流式响应 |
+| M16 | `M16-knowledge-rag-baseline.md` | 知识库与 RAG 基线 |
+| M17 | `M17-search-v2.md` | 站内搜索 2.0 |
+| M18 | `M18-realtime-notifications.md` | 实时通知 |
+| M19 | `M19-drafts-editor-versioning.md` | 草稿与编辑器版本 |
+| M20 | `M20-moderation-v2.md` | 治理 V2 |
+| M21 | `M21-admin-observability-console.md` | 管理观测台 |
+| M22 | `M22-user-profile-relations.md` | 用户主页与关系 |
+| M23 | `M23-category-tag-operations.md` | 分类与标签运营 |
+| M24 | `M24-ai-cost-quota-governance.md` | AI 成本与配额治理 |
+| M25 | `M25-security-hardening.md` | 安全加固 |
+| M26 | `M26-performance-pagination-governance.md` | 性能与分页治理 |
+| M27 | `M27-deployment-packaging.md` | 部署打包 |
+| M28 | `M28-ci-cd-quality-gates.md` | CI/CD 质量门禁 |
+| M29 | `M29-product-accessibility-polish.md` | 产品体验与可访问性收口 |
+| M30 | `M30-release-candidate.md` | Release Candidate 收口 |
