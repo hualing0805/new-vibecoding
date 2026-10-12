@@ -3,6 +3,7 @@ package com.threadmind.forum.common.security;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
@@ -31,6 +32,7 @@ public class JwtService {
     private final byte[] signingKey;
     private final long tokenTtlSeconds;
 
+    @Autowired
     public JwtService(
             ObjectMapper objectMapper,
             @Value("${threadmind.security.jwt-secret}") String jwtSecret,

@@ -1,6 +1,7 @@
 package com.threadmind.forum.agent.service;
 
 import com.threadmind.forum.common.security.CurrentUserProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,7 @@ public class AgentProtectionService {
     private final Map<String, ArrayDeque<Instant>> callWindows = new HashMap<>();
     private final Map<String, CircuitState> circuits = new HashMap<>();
 
+    @Autowired
     public AgentProtectionService(CurrentUserProvider currentUserProvider) {
         this(currentUserProvider, Clock.systemUTC());
     }
