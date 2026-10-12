@@ -1,14 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import AdminDashboardPage from '../pages/AdminDashboardPage.vue'
-import AssistantPage from '../pages/AssistantPage.vue'
-import FavoritesPage from '../pages/FavoritesPage.vue'
-import HomePage from '../pages/HomePage.vue'
-import LoginPage from '../pages/LoginPage.vue'
-import NotificationsPage from '../pages/NotificationsPage.vue'
-import TopicDetailPage from '../pages/TopicDetailPage.vue'
-import TopicEditorPage from '../pages/TopicEditorPage.vue'
 import { useSessionStore } from '../stores/session'
+
+const AdminDashboardPage = () => import('../pages/AdminDashboardPage.vue')
+const AssistantPage = () => import('../pages/AssistantPage.vue')
+const FavoritesPage = () => import('../pages/FavoritesPage.vue')
+const HomePage = () => import('../pages/HomePage.vue')
+const LoginPage = () => import('../pages/LoginPage.vue')
+const NotificationsPage = () => import('../pages/NotificationsPage.vue')
+const TopicDetailPage = () => import('../pages/TopicDetailPage.vue')
+const TopicEditorPage = () => import('../pages/TopicEditorPage.vue')
 
 const router = createRouter({
   history: createWebHistory(),

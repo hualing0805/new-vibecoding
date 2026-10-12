@@ -4,8 +4,9 @@ import { Activity, Flame, MessageSquareText, RadioTower } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
 import AiDock from '../components/AiDock.vue'
+import ContentState from '../components/ContentState.vue'
 import TopicList from '../components/TopicList.vue'
-import { apiModeLabel, fetchCategories, fetchTopics } from '../api/forum'
+import { apiErrorText, apiModeLabel, fetchCategories, fetchTopics } from '../api/forum'
 import type { Category, TopicSummary } from '../api/types'
 
 const activeSort = ref<'latest' | 'hot' | 'unanswered'>('latest')
@@ -13,6 +14,8 @@ const activeCategory = ref<number | null>(null)
 const categories = ref<Category[]>([])
 const topics = ref<TopicSummary[]>([])
 const loading = ref(true)
+const error = ref('')
+let requestId = 0
 const route = useRoute()
 const router = useRouter()
 
@@ -21,19 +24,34 @@ const totalAiCalls = computed(() => Math.max(5, categories.value.find((category)
 const activeKeyword = computed(() => typeof route.query.keyword === 'string' ? route.query.keyword.trim() : '')
 
 async function loadTopics() {
+  const currentRequest = ++requestId
   loading.value = true
-  const response = await fetchTopics({
-    categoryId: activeCategory.value,
-    sort: activeSort.value,
-    keyword: activeKeyword.value
-  })
-  topics.value = response.items
-  loading.value = false
+  error.value = ''
+  try {
+    const response = await fetchTopics({
+      categoryId: activeCategory.value,
+      sort: activeSort.value,
+      keyword: activeKeyword.value
+    })
+    if (currentRequest === requestId) {
+      topics.value = response.items
+    }
+  } catch (err) {
+    if (currentRequest === requestId) {
+      error.value = apiErrorText(err, '主题加载失败，请检查服务状态后重试。')
+    }
+  } finally {
+    if (currentRequest === requestId) {
+      loading.value = false
+    }
+  }
 }
 
 onMounted(async () => {
-  categories.value = await fetchCategories()
-  await loadTopics()
+  const [categoryResult] = await Promise.allSettled([fetchCategories(), loadTopics()])
+  if (categoryResult.status === 'fulfilled') {
+    categories.value = categoryResult.value
+  }
 })
 
 watch([activeSort, activeCategory, activeKeyword], () => {
@@ -79,16 +97,19 @@ function clearKeyword() {
 
       <div class="control-band">
         <div class="segmented-control" aria-label="排序方式">
-          <button :class="{ active: activeSort === 'latest' }" type="button" @click="activeSort = 'latest'">最新</button>
-          <button :class="{ active: activeSort === 'hot' }" type="button" @click="activeSort = 'hot'">热门</button>
-          <button :class="{ active: activeSort === 'unanswered' }" type="button" @click="activeSort = 'unanswered'">待回复</button>
+          <button :class="{ active: activeSort === 'latest' }" :aria-pressed="activeSort === 'latest'" type="button" @click="activeSort = 'latest'">最新</button>
+          <button :class="{ active: activeSort === 'hot' }" :aria-pressed="activeSort === 'hot'" type="button" @click="activeSort = 'hot'">热门</button>
+          <button :class="{ active: activeSort === 'unanswered' }" :aria-pressed="activeSort === 'unanswered'" type="button" @click="activeSort = 'unanswered'">待回复</button>
         </div>
         <button v-if="activeKeyword" class="filter-chip" type="button" @click="clearKeyword">
           搜索：{{ activeKeyword }}
         </button>
       </div>
 
-      <TopicList :topics="topics" />
+      <ContentState v-if="error" kind="error" :message="error" @retry="loadTopics" />
+      <ContentState v-else-if="loading" kind="loading" message="正在同步主题" />
+      <ContentState v-else-if="!topics.length" kind="empty" message="当前筛选下没有主题" />
+      <TopicList v-else :topics="topics" />
     </section>
 
     <section class="side-column" aria-label="板块与助手">
@@ -101,6 +122,7 @@ function clearKeyword() {
           :key="category.id"
           class="category-row"
           :class="{ active: activeCategory === category.id }"
+          :aria-pressed="activeCategory === category.id"
           type="button"
           @click="activeCategory = activeCategory === category.id ? null : category.id"
         >

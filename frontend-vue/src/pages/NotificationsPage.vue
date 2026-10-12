@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Bell, Check, Inbox } from 'lucide-vue-next'
+import { Bell, Check } from 'lucide-vue-next'
 
+import ContentState from '../components/ContentState.vue'
 import { apiErrorText, fetchNotifications, markNotificationRead } from '../api/forum'
 import type { NotificationItem } from '../api/types'
 import { useSessionStore } from '../stores/session'
@@ -63,12 +64,9 @@ onMounted(loadNotifications)
         </div>
       </div>
 
-      <p v-if="error" class="form-error">{{ error }}</p>
-      <p v-else-if="loading" class="empty-state">正在加载通知。</p>
-      <div v-else-if="!notifications.length" class="empty-state">
-        <Inbox :size="18" aria-hidden="true" />
-        <span>暂无通知</span>
-      </div>
+      <ContentState v-if="error" kind="error" :message="error" @retry="loadNotifications" />
+      <ContentState v-else-if="loading" kind="loading" message="正在加载通知" />
+      <ContentState v-else-if="!notifications.length" kind="empty" message="暂无通知" />
 
       <div v-else class="notification-list">
         <article v-for="item in notifications" :key="item.id" class="notification-row" :class="{ unread: !item.read }">

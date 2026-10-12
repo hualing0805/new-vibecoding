@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Bot, Bell, Bookmark, Home, LogIn, LogOut, PencilLine, Plus, Search, ShieldCheck } from 'lucide-vue-next'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 
@@ -10,14 +10,14 @@ const router = useRouter()
 const route = useRoute()
 const searchKeyword = ref('')
 
-const navItems = [
-  { to: '/', label: '首页', icon: Home },
-  { to: '/topics/new', label: '发帖', icon: PencilLine },
-  { to: '/favorites', label: '收藏', icon: Bookmark },
-  { to: '/assistant', label: '助手', icon: Bot },
-  { to: '/admin', label: '管理', icon: ShieldCheck },
-  { to: '/login', label: '登录', icon: LogIn }
-]
+const navItems = computed(() => [
+  { to: '/', label: '首页', icon: Home, visible: true },
+  { to: '/topics/new', label: '发帖', icon: PencilLine, visible: session.isSignedIn },
+  { to: '/favorites', label: '收藏', icon: Bookmark, visible: session.isSignedIn },
+  { to: '/assistant', label: '助手', icon: Bot, visible: session.isSignedIn },
+  { to: '/admin', label: '管理', icon: ShieldCheck, visible: session.isAdmin },
+  { to: '/login', label: '登录', icon: LogIn, visible: !session.isSignedIn }
+].filter((item) => item.visible))
 
 function logout() {
   session.logout()
@@ -59,7 +59,8 @@ watch(() => route.query.keyword, (keyword) => {
       <header class="top-bar">
         <form class="search-box" role="search" @submit.prevent="submitSearch">
           <Search :size="18" aria-hidden="true" />
-          <input v-model="searchKeyword" placeholder="搜索帖子、标签、作者" />
+          <label class="sr-only" for="global-search">搜索帖子、标签、作者</label>
+          <input id="global-search" v-model="searchKeyword" type="search" placeholder="搜索帖子、标签、作者" />
         </form>
         <div class="top-actions">
           <span v-if="session.isSignedIn" class="session-chip">{{ session.nickname }}</span>
@@ -70,7 +71,7 @@ watch(() => route.query.keyword, (keyword) => {
           <button v-if="session.isSignedIn" class="icon-button" type="button" aria-label="退出登录" @click="logout">
             <LogOut :size="18" aria-hidden="true" />
           </button>
-          <RouterLink class="primary-action" to="/topics/new">
+          <RouterLink v-if="session.isSignedIn" class="primary-action header-publish" to="/topics/new">
             <Plus :size="18" aria-hidden="true" />
             <span>发布</span>
           </RouterLink>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Bookmark, Inbox } from 'lucide-vue-next'
+import { Bookmark } from 'lucide-vue-next'
 
+import ContentState from '../components/ContentState.vue'
 import TopicList from '../components/TopicList.vue'
 import { apiErrorText, fetchFavoriteTopics } from '../api/forum'
 import type { TopicSummary } from '../api/types'
@@ -40,12 +41,9 @@ onMounted(loadFavorites)
         </div>
       </div>
 
-      <p v-if="error" class="form-error">{{ error }}</p>
-      <p v-else-if="loading" class="empty-state">正在加载收藏。</p>
-      <div v-else-if="!topics.length" class="empty-state">
-        <Inbox :size="18" aria-hidden="true" />
-        <span>暂无收藏主题</span>
-      </div>
+      <ContentState v-if="error" kind="error" :message="error" @retry="loadFavorites" />
+      <ContentState v-else-if="loading" kind="loading" message="正在加载收藏" />
+      <ContentState v-else-if="!topics.length" kind="empty" message="暂无收藏主题" />
       <TopicList v-else :topics="topics" />
     </section>
   </div>
