@@ -1,33 +1,25 @@
 package com.threadmind.forum.agent.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.threadmind.forum.agent.client.AgentClient;
 import com.threadmind.forum.agent.dto.AgentDtos.AgentChatRequest;
 import com.threadmind.forum.agent.dto.AgentDtos.AgentChatResponse;
 import com.threadmind.forum.agent.dto.AgentDtos.ToolCallDto;
 import com.threadmind.forum.agent.dto.AgentDtos.TopicSummaryRequest;
 import com.threadmind.forum.agent.dto.AgentDtos.TopicSummaryResponse;
-import com.threadmind.forum.agent.repository.TopicSummaryCacheRepository;
-import com.threadmind.forum.agent.repository.TopicSummaryCacheRepository.CachedTopicSummary;
 import com.threadmind.forum.agent.service.AgentAuditService.AuditSession;
-import com.threadmind.forum.common.security.CurrentUserProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestClientException;
 
-import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,10 +35,7 @@ class AgentServiceTest {
     private AgentProtectionService agentProtectionService;
 
     @Mock
-    private TopicSummaryCacheRepository topicSummaryCacheRepository;
-
-    @Mock
-    private CurrentUserProvider currentUserProvider;
+    private TopicSummaryService topicSummaryService;
 
     @Test
     void chatAddsAuditSessionIdAndRecordsSuccess() {
@@ -95,29 +84,18 @@ class AgentServiceTest {
     }
 
     @Test
-    void summarizeTopicUsesFreshCacheWithoutCallingAgent() {
+    void summarizeTopicDelegatesCachePolicyToTopicSummaryService() {
         AgentService service = service();
-        CachedTopicSummary cache = new CachedTopicSummary(
-                1L,
-                101L,
-                "cached summary",
-                "[\"point\"]",
-                "[\"question\"]",
-                77L,
-                7L,
-                Instant.parse("2026-08-19T00:00:00Z"),
-                Instant.parse("2026-08-20T00:00:00Z")
+        TopicSummaryRequest request = new TopicSummaryRequest(101L);
+        TopicSummaryResponse expected = new TopicSummaryResponse(
+                "cached summary", List.of("point"), List.of("question"), List.of(), List.of(), 77L
         );
-        when(topicSummaryCacheRepository.findFreshByTopicId(101L)).thenReturn(Optional.of(cache));
+        when(topicSummaryService.summarize(request, false)).thenReturn(expected);
 
-        TopicSummaryResponse response = service.summarizeTopic(new TopicSummaryRequest(101L));
+        TopicSummaryResponse response = service.summarizeTopic(request);
 
-        assertEquals("cached summary", response.summary());
-        assertEquals(List.of("point"), response.points());
-        assertEquals(77L, response.sessionId());
-        assertEquals("summary-cache", response.toolCalls().get(0).toolName());
-        verify(agentProtectionService, never()).assertAllowed("SUMMARY");
-        verifyNoInteractions(agentClient);
+        assertEquals(expected, response);
+        verify(topicSummaryService).summarize(request, false);
     }
 
     private AgentService service() {
@@ -125,9 +103,7 @@ class AgentServiceTest {
                 agentClient,
                 agentAuditService,
                 agentProtectionService,
-                topicSummaryCacheRepository,
-                new ObjectMapper(),
-                currentUserProvider
+                topicSummaryService
         );
     }
 }

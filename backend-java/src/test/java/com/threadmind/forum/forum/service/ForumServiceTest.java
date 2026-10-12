@@ -18,6 +18,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -45,6 +46,7 @@ class ForumServiceTest {
         CreatedResourceResponse response = service.createTopic(request);
 
         assertEquals(101L, response.id());
+        verify(currentUserProvider, times(1)).currentUserId();
         verify(forumRepository).createTopic(request, 7L);
         verify(notificationRepository).createNotification(
                 7L,

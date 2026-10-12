@@ -52,9 +52,10 @@ public class ForumService {
         if (!forumRepository.categoryExists(request.categoryId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found");
         }
-        Long topicId = forumRepository.createTopic(request, currentUserProvider.currentUserId());
+        Long userId = currentUserProvider.currentUserId();
+        Long topicId = forumRepository.createTopic(request, userId);
         notificationRepository.createNotification(
-                currentUserProvider.currentUserId(),
+                userId,
                 "TOPIC_CREATED",
                 "Topic published",
                 "Your topic has been saved to the forum."
