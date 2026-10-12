@@ -1,24 +1,30 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
 
 
-client = TestClient(create_app())
 headers = {"X-Internal-Token": "dev-internal-token"}
 
 
-def test_health() -> None:
+@pytest.fixture
+def client():
+    with TestClient(create_app()) as test_client:
+        yield test_client
+
+
+def test_health(client: TestClient) -> None:
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "UP"
 
 
-def test_agent_requires_internal_token() -> None:
+def test_agent_requires_internal_token(client: TestClient) -> None:
     response = client.post("/agent/chat", json={"message": "hello"})
     assert response.status_code == 401
 
 
-def test_suggest_tags() -> None:
+def test_suggest_tags(client: TestClient) -> None:
     response = client.post(
         "/agent/suggest-tags",
         headers=headers,
@@ -31,7 +37,7 @@ def test_suggest_tags() -> None:
     assert "Vue3" in response.json()["tags"]
 
 
-def test_chat_returns_tool_trace() -> None:
+def test_chat_returns_tool_trace(client: TestClient) -> None:
     response = client.post("/agent/chat", headers=headers, json={"message": "Agent 和 Java 怎么配合"})
 
     assert response.status_code == 200
@@ -41,7 +47,7 @@ def test_chat_returns_tool_trace() -> None:
     assert "elapsedMs" in payload["toolCalls"][0]
 
 
-def test_summarize_topic_returns_tool_trace() -> None:
+def test_summarize_topic_returns_tool_trace(client: TestClient) -> None:
     response = client.post("/agent/summarize-topic", headers=headers, json={"topicId": 101})
 
     assert response.status_code == 200

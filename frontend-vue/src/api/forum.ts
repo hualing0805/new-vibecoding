@@ -24,11 +24,18 @@ import type {
 } from './types'
 import { categories as mockCategories, replies as mockReplies, reports as mockReports, topics as mockTopics } from '../app/mockData'
 
-export const liveApiEnabled = Boolean(import.meta.env.VITE_API_BASE_URL)
-export const apiModeLabel = liveApiEnabled ? 'API 优先' : 'Mock 模式'
+export const mockApiEnabled = import.meta.env.VITE_USE_MOCK_API === 'true'
+export const liveApiEnabled = !mockApiEnabled
+export const apiModeLabel = mockApiEnabled ? 'Mock 模式' : '实时 API'
 
 async function requestLive<T>(request: () => Promise<{ data: ApiResponse<T> }>): Promise<T> {
   const response = await request()
+  if (response.data.code !== 'OK') {
+    throw new Error(response.data.message || `API request failed with code ${response.data.code}`)
+  }
+  if (response.data.data === undefined || response.data.data === null) {
+    throw new Error('API response is missing data')
+  }
   return response.data.data
 }
 
@@ -37,18 +44,6 @@ async function requestRequired<T>(request: () => Promise<{ data: ApiResponse<T> 
     return fallback
   }
   return requestLive(request)
-}
-
-async function requestOr<T>(request: () => Promise<{ data: ApiResponse<T> }>, fallback: T): Promise<T> {
-  if (!liveApiEnabled) {
-    return fallback
-  }
-  try {
-    const response = await request()
-    return response.data.data
-  } catch {
-    return fallback
-  }
 }
 
 export function loginUser(payload: { username: string; password: string }): Promise<AuthResponse> {
@@ -70,7 +65,7 @@ export function fetchCurrentUser(): Promise<AuthUser> {
 }
 
 export function fetchCategories(): Promise<Category[]> {
-  return requestOr(() => apiClient.get<ApiResponse<Category[]>>('/categories'), mockCategories)
+  return requestRequired(() => apiClient.get<ApiResponse<Category[]>>('/categories'), mockCategories)
 }
 
 export function fetchTopics(params: { categoryId?: number | null; sort?: string; keyword?: string } = {}): Promise<PageResponse<TopicSummary>> {
@@ -80,7 +75,7 @@ export function fetchTopics(params: { categoryId?: number | null; sort?: string;
     pageSize: 20,
     total: filterMockTopics(params).length
   }
-  return requestOr(() => apiClient.get<ApiResponse<PageResponse<TopicSummary>>>('/topics', { params }), fallback)
+  return requestRequired(() => apiClient.get<ApiResponse<PageResponse<TopicSummary>>>('/topics', { params }), fallback)
 }
 
 export function fetchFavoriteTopics(params: { page?: number; pageSize?: number } = {}): Promise<PageResponse<TopicSummary>> {
@@ -100,7 +95,7 @@ export function fetchTopic(id: number): Promise<TopicDetail> {
     content: '我们准备把 Java 后端作为权限、事务和审计中心，Python Agent 只处理模型调用和工具编排。\n\n当前争议点在于 Agent 做站内问答时，应该直接查 MySQL，还是通过 Java 提供的内部工具接口。',
     aiSummary: '这条讨论集中在 Java 与 Python Agent 的职责边界。'
   }
-  return requestOr(() => apiClient.get<ApiResponse<TopicDetail>>(`/topics/${id}`), fallback)
+  return requestRequired(() => apiClient.get<ApiResponse<TopicDetail>>(`/topics/${id}`), fallback)
 }
 
 export function createTopic(payload: { categoryId: number; title: string; content: string; tagNames: string[] }): Promise<CreatedResource> {
@@ -108,7 +103,7 @@ export function createTopic(payload: { categoryId: number; title: string; conten
 }
 
 export function fetchReplies(topicId: number): Promise<Reply[]> {
-  return requestOr(() => apiClient.get<ApiResponse<Reply[]>>(`/topics/${topicId}/replies`), mockReplies.filter((reply) => reply.topicId === topicId))
+  return requestRequired(() => apiClient.get<ApiResponse<Reply[]>>(`/topics/${topicId}/replies`), mockReplies.filter((reply) => reply.topicId === topicId))
 }
 
 export function createReply(topicId: number, content: string): Promise<CreatedResource> {

@@ -29,8 +29,18 @@ function submitSearch() {
   router.push({ path: '/', query: keyword ? { keyword } : {} })
 }
 
-onMounted(() => void session.refreshUnreadCount())
-watch(() => route.fullPath, () => void session.refreshUnreadCount())
+onMounted(async () => {
+  const hadToken = session.isSignedIn
+  const validSession = await session.initialize()
+  if (hadToken && !validSession && route.meta.requiresAuth) {
+    await router.replace({ path: '/login', query: { redirect: route.fullPath } })
+  }
+})
+watch(() => route.fullPath, () => {
+  if (session.isSignedIn) {
+    void session.refreshUnreadCount()
+  }
+})
 watch(() => route.query.keyword, (keyword) => {
   searchKeyword.value = typeof keyword === 'string' ? keyword : ''
 }, { immediate: true })

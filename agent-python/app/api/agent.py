@@ -1,10 +1,8 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Request
 
 from app.agents.forum_agent import ForumAgent
-from app.clients.model_client import ModelClient
-from app.core.config import Settings, get_settings
 from app.core.security import verify_internal_token
 from app.schemas.agent import (
     AgentChatRequest,
@@ -18,13 +16,12 @@ from app.schemas.agent import (
     TopicSummaryRequest,
     TopicSummaryResponse,
 )
-from app.tools.java_tools import JavaForumTools
 
 router = APIRouter(prefix="/agent", dependencies=[Depends(verify_internal_token)])
 
 
-def get_agent(settings: Settings = Depends(get_settings)) -> ForumAgent:
-    return ForumAgent(ModelClient(settings), JavaForumTools(settings))
+def get_agent(request: Request) -> ForumAgent:
+    return request.app.state.forum_agent
 
 
 @router.post("/chat", response_model=AgentChatResponse)

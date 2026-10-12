@@ -16,6 +16,7 @@ import {
   unlikeTopic
 } from '../api/forum'
 import { topics as mockTopics } from '../app/mockData'
+import ContentState from '../components/ContentState.vue'
 import type { AgentCitation, AgentToolCall, InteractionStatus, Reply, TopicDetail } from '../api/types'
 
 const route = useRoute()
@@ -33,6 +34,8 @@ const summaryToolCalls = ref<AgentToolCall[]>([])
 const summarySessionId = ref<number | null>(null)
 const summaryLoading = ref(false)
 const actionError = ref('')
+const loadError = ref('')
+const loading = ref(true)
 const replying = ref(false)
 const reacting = ref(false)
 const interactionStatus = ref<InteractionStatus>({
@@ -43,29 +46,62 @@ const interactionStatus = ref<InteractionStatus>({
   likeCount: 0,
   favoriteCount: 0
 })
+let loadRequestId = 0
+let summaryRequestId = 0
 
 async function loadTopic() {
+  const currentRequest = ++loadRequestId
+  const id = topicId.value
+  loading.value = true
+  loadError.value = ''
   actionError.value = ''
-  topic.value = await fetchTopic(topicId.value)
-  topicReplies.value = await fetchReplies(topicId.value)
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    loadError.value = '主题地址无效，请返回首页重新选择。'
+    loading.value = false
+    return
+  }
   try {
-    interactionStatus.value = await fetchTopicInteractionStatus(topicId.value)
-    topic.value = {
-      ...topic.value,
-      likeCount: interactionStatus.value.likeCount,
-      favoriteCount: interactionStatus.value.favoriteCount
+    const [loadedTopic, loadedReplies] = await Promise.all([fetchTopic(id), fetchReplies(id)])
+    if (currentRequest !== loadRequestId) {
+      return
     }
-  } catch {
-    interactionStatus.value = {
-      targetType: 'TOPIC',
-      targetId: topicId.value,
-      liked: false,
-      favorited: false,
-      likeCount: topic.value.likeCount,
-      favoriteCount: topic.value.favoriteCount
+    topic.value = loadedTopic
+    topicReplies.value = loadedReplies
+    summaryPoints.value = []
+    summaryCitations.value = []
+    summaryToolCalls.value = []
+    summarySessionId.value = null
+
+    try {
+      interactionStatus.value = await fetchTopicInteractionStatus(id)
+      if (currentRequest !== loadRequestId) {
+        return
+      }
+      topic.value = {
+        ...topic.value,
+        likeCount: interactionStatus.value.likeCount,
+        favoriteCount: interactionStatus.value.favoriteCount
+      }
+    } catch {
+      interactionStatus.value = {
+        targetType: 'TOPIC',
+        targetId: id,
+        liked: false,
+        favorited: false,
+        likeCount: topic.value.likeCount,
+        favoriteCount: topic.value.favoriteCount
+      }
+    }
+    void loadSummary(false, currentRequest)
+  } catch (err) {
+    if (currentRequest === loadRequestId) {
+      loadError.value = apiErrorText(err, '主题加载失败，请检查服务状态后重试。')
+    }
+  } finally {
+    if (currentRequest === loadRequestId) {
+      loading.value = false
     }
   }
-  await loadSummary(false)
 }
 
 async function like() {
@@ -118,13 +154,22 @@ async function submitReply() {
   }
 }
 
-async function loadSummary(refresh: boolean) {
+async function loadSummary(refresh: boolean, parentRequestId = loadRequestId) {
+  const currentSummaryRequest = ++summaryRequestId
   summaryLoading.value = true
   try {
     const aiSummary = await summarizeTopic(topicId.value, refresh)
+    if (parentRequestId !== loadRequestId || currentSummaryRequest !== summaryRequestId) {
+      return
+    }
     applySummary(aiSummary)
   } catch (err) {
-    actionError.value = apiErrorText(err, refresh ? '摘要刷新失败，已保留当前内容。' : '登录后可生成 AI 摘要。')
+    if (parentRequestId !== loadRequestId || currentSummaryRequest !== summaryRequestId) {
+      return
+    }
+    if (refresh) {
+      actionError.value = apiErrorText(err, '摘要刷新失败，已保留当前内容。')
+    }
     if (!topic.value.aiSummary) {
       topic.value = { ...topic.value, aiSummary: '登录后可生成 AI 摘要。' }
       summaryPoints.value = []
@@ -133,7 +178,9 @@ async function loadSummary(refresh: boolean) {
       summarySessionId.value = null
     }
   } finally {
-    summaryLoading.value = false
+    if (currentSummaryRequest === summaryRequestId) {
+      summaryLoading.value = false
+    }
   }
 }
 
@@ -154,6 +201,9 @@ watch(topicId, loadTopic)
 
 <template>
   <div class="detail-layout">
+    <ContentState v-if="loadError" class="detail-state" kind="error" :message="loadError" @retry="loadTopic" />
+    <ContentState v-else-if="loading" class="detail-state" kind="loading" message="正在加载主题" />
+    <template v-else>
     <article class="topic-detail">
       <div class="topic-card__top">
         <span class="category-chip">{{ topic.category.name }}</span>
@@ -178,7 +228,7 @@ watch(topicId, loadTopic)
         <button type="button" :class="{ active: interactionStatus.favorited }" :disabled="reacting" @click="favorite">
           <Star :size="17" aria-hidden="true" />{{ interactionStatus.favorited ? '已收藏' : '收藏' }} {{ topic.favoriteCount }}
         </button>
-        <button type="button"><MessageSquare :size="17" aria-hidden="true" />回复 {{ topic.replyCount }}</button>
+        <a class="secondary-action" href="#reply-form"><MessageSquare :size="17" aria-hidden="true" />回复 {{ topic.replyCount }}</a>
       </div>
       <p v-if="actionError" class="form-error">{{ actionError }}</p>
     </article>
@@ -228,16 +278,19 @@ watch(topicId, loadTopic)
           <span>{{ new Date(reply.createdAt).toLocaleString('zh-CN') }}</span>
         </header>
         <p>{{ reply.content }}</p>
-        <button type="button"><Heart :size="15" aria-hidden="true" />{{ reply.likeCount }}</button>
+        <span class="reply-like-count"><Heart :size="15" aria-hidden="true" />{{ reply.likeCount }}</span>
       </article>
+      <ContentState v-if="!topicReplies.length" kind="empty" message="暂无回复，来写第一条回复" />
 
-      <form class="reply-form" @submit.prevent="submitReply">
-        <textarea v-model="replyText" rows="4" placeholder="写下回复"></textarea>
+      <form id="reply-form" class="reply-form" @submit.prevent="submitReply">
+        <label class="sr-only" for="reply-content">回复内容</label>
+        <textarea id="reply-content" v-model="replyText" rows="4" placeholder="写下回复"></textarea>
         <button class="primary-action" type="submit" :disabled="replying">
           <Send :size="17" aria-hidden="true" />
           <span>{{ replying ? '提交中' : '提交回复' }}</span>
         </button>
       </form>
     </section>
+    </template>
   </div>
 </template>

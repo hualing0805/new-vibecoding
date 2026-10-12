@@ -2,7 +2,6 @@ package com.threadmind.forum.moderation.service;
 
 import com.threadmind.forum.common.security.CurrentUserProvider;
 import com.threadmind.forum.common.web.TraceContext;
-import com.threadmind.forum.forum.repository.ForumRepository;
 import com.threadmind.forum.moderation.dto.HandleReportRequest;
 import com.threadmind.forum.moderation.dto.ModerationRecordDto;
 import com.threadmind.forum.moderation.dto.ModerationResultResponse;
@@ -21,23 +20,21 @@ import java.util.Locale;
 public class ModerationService {
 
     private final ModerationRepository moderationRepository;
-    private final ForumRepository forumRepository;
     private final CurrentUserProvider currentUserProvider;
 
     public ModerationService(
             ModerationRepository moderationRepository,
-            ForumRepository forumRepository,
             CurrentUserProvider currentUserProvider
     ) {
         this.moderationRepository = moderationRepository;
-        this.forumRepository = forumRepository;
         this.currentUserProvider = currentUserProvider;
     }
 
     @Transactional
     public ReportDto createReport(ReportRequest request) {
-        forumRepository.findTarget(request.targetType(), request.targetId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reported target not found"));
+        if (!moderationRepository.targetExists(request.targetType(), request.targetId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Reported target not found");
+        }
         return moderationRepository.createReport(currentUserProvider.currentUserId(), request);
     }
 
@@ -53,7 +50,7 @@ public class ModerationService {
         String finalStatus = "IGNORE".equals(action) ? "REJECTED" : "ACCEPTED";
         moderationRepository.updateReportStatus(reportId, finalStatus);
         if (!"IGNORE".equals(action)) {
-            forumRepository.applyModerationAction(report.targetType(), report.targetId(), action);
+            moderationRepository.applyTargetAction(report.targetType(), report.targetId(), action);
         }
         ModerationRecordDto record = moderationRepository.createModerationRecord(
                 reportId,

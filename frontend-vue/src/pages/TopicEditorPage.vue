@@ -24,13 +24,7 @@ const suggestedTags = computed(() => {
   return tags.length ? tags : ['Java', 'Agent', '架构']
 })
 
-const previewHtml = computed(() => {
-  const escaped = content.value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
-  return escaped
-    .split(/\n{2,}/)
-    .map((paragraph) => `<p>${paragraph}</p>`)
-    .join('')
-})
+const previewParagraphs = computed(() => content.value.split(/\n{2,}/).filter(Boolean))
 
 async function polishDraft() {
   error.value = ''
@@ -163,7 +157,9 @@ onMounted(async () => {
             <strong>预览</strong>
           </div>
           <h2>{{ title }}</h2>
-          <div class="preview-content" v-html="previewHtml"></div>
+          <div class="preview-content">
+            <p v-for="paragraph in previewParagraphs" :key="paragraph">{{ paragraph }}</p>
+          </div>
         </aside>
       </div>
     </section>

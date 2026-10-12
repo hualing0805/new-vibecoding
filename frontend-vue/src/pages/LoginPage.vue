@@ -30,7 +30,7 @@ async function submit() {
     } else {
       await session.login(username.value, password.value)
     }
-    await router.push(String(route.query.redirect || '/'))
+    await router.push(safeRedirect(route.query.redirect))
   } catch {
     error.value = mode.value === 'register'
       ? '注册失败，请检查用户名、邮箱或密码。'
@@ -38,6 +38,10 @@ async function submit() {
   } finally {
     working.value = false
   }
+}
+
+function safeRedirect(value: unknown) {
+  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : '/'
 }
 
 function switchMode(nextMode: 'login' | 'register') {

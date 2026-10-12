@@ -270,66 +270,6 @@ public class ForumRepository {
         }
     }
 
-    public Optional<TargetRef> findTarget(String targetType, Long targetId) {
-        String normalizedType = targetType == null ? "" : targetType.trim().toUpperCase(Locale.ROOT);
-        try {
-            if ("TOPIC".equals(normalizedType)) {
-                return Optional.ofNullable(jdbc.queryForObject(
-                        """
-                        SELECT id, title AS label
-                        FROM topics
-                        WHERE id = :id AND deleted_at IS NULL
-                        LIMIT 1
-                        """,
-                        new MapSqlParameterSource("id", targetId),
-                        (rs, rowNum) -> new TargetRef("TOPIC", rs.getLong("id"), rs.getString("label"))
-                ));
-            }
-            if ("REPLY".equals(normalizedType)) {
-                return Optional.ofNullable(jdbc.queryForObject(
-                        """
-                        SELECT id, CONCAT('Reply #', id) AS label
-                        FROM replies
-                        WHERE id = :id AND deleted_at IS NULL
-                        LIMIT 1
-                        """,
-                        new MapSqlParameterSource("id", targetId),
-                        (rs, rowNum) -> new TargetRef("REPLY", rs.getLong("id"), rs.getString("label"))
-                ));
-            }
-            return Optional.empty();
-        } catch (EmptyResultDataAccessException ex) {
-            return Optional.empty();
-        }
-    }
-
-    public void applyModerationAction(String targetType, Long targetId, String action) {
-        String normalizedType = targetType == null ? "" : targetType.trim().toUpperCase(Locale.ROOT);
-        String normalizedAction = action == null ? "" : action.trim().toUpperCase(Locale.ROOT);
-        if ("TOPIC".equals(normalizedType)) {
-            if ("LOCK".equals(normalizedAction)) {
-                jdbc.update("UPDATE topics SET status = 'LOCKED' WHERE id = :id", new MapSqlParameterSource("id", targetId));
-            } else if ("HIDE".equals(normalizedAction)) {
-                jdbc.update("UPDATE topics SET status = 'HIDDEN' WHERE id = :id", new MapSqlParameterSource("id", targetId));
-            } else if ("DELETE".equals(normalizedAction)) {
-                jdbc.update("UPDATE topics SET status = 'DELETED', deleted_at = CURRENT_TIMESTAMP WHERE id = :id", new MapSqlParameterSource("id", targetId));
-            }
-        }
-        if ("REPLY".equals(normalizedType) && ("HIDE".equals(normalizedAction) || "DELETE".equals(normalizedAction))) {
-            jdbc.update(
-                    """
-                    UPDATE replies
-                    SET status = :status,
-                        deleted_at = CASE WHEN :status = 'DELETED' THEN CURRENT_TIMESTAMP ELSE deleted_at END
-                    WHERE id = :id
-                    """,
-                    new MapSqlParameterSource()
-                            .addValue("id", targetId)
-                            .addValue("status", normalizedAction.equals("DELETE") ? "DELETED" : "HIDDEN")
-            );
-        }
-    }
-
     private String topicWhereClause(Long categoryId, String keyword, MapSqlParameterSource params) {
         StringBuilder where = new StringBuilder("""
                 WHERE t.deleted_at IS NULL
@@ -541,9 +481,6 @@ public class ForumRepository {
             return compact;
         }
         return compact.substring(0, 96) + "...";
-    }
-
-    public record TargetRef(String targetType, Long targetId, String label) {
     }
 
     private record TopicRow(

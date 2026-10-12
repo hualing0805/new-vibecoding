@@ -16,6 +16,19 @@ export const useSessionStore = defineStore('session', {
     isAdmin: (state) => state.roles.includes('ADMIN') || state.roles.includes('MODERATOR')
   },
   actions: {
+    async initialize() {
+      if (!this.token) {
+        return false
+      }
+      try {
+        await this.refreshCurrentUser()
+        await this.refreshUnreadCount()
+        return true
+      } catch {
+        this.logout()
+        return false
+      }
+    },
     async login(username: string, password: string) {
       this.applyAuth(await loginUser({ username, password }))
     },
@@ -57,6 +70,8 @@ export const useSessionStore = defineStore('session', {
     logout() {
       this.token = ''
       this.username = ''
+      this.nickname = '演示用户'
+      this.roles = []
       this.unreadCount = 0
       localStorage.removeItem('threadmind.token')
       localStorage.removeItem('threadmind.username')

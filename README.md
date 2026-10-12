@@ -84,6 +84,7 @@ npm run dev
 
 ```powershell
 VITE_API_BASE_URL=http://localhost:8080/api
+VITE_USE_MOCK_API=false
 ```
 
 开发脚本：

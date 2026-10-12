@@ -69,6 +69,72 @@ public class ModerationRepository {
         }
     }
 
+    public boolean targetExists(String targetType, Long targetId) {
+        String normalizedType = normalize(targetType);
+        String table = switch (normalizedType) {
+            case "TOPIC" -> "topics";
+            case "REPLY" -> "replies";
+            default -> null;
+        };
+        if (table == null) {
+            return false;
+        }
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM " + table + " WHERE id = :id AND deleted_at IS NULL",
+                new MapSqlParameterSource("id", targetId),
+                Integer.class
+        );
+        return count != null && count > 0;
+    }
+
+    public void applyTargetAction(String targetType, Long targetId, String action) {
+        String normalizedType = normalize(targetType);
+        String normalizedAction = normalize(action);
+        if ("TOPIC".equals(normalizedType)) {
+            applyTopicAction(targetId, normalizedAction);
+            return;
+        }
+        if ("REPLY".equals(normalizedType)) {
+            applyReplyAction(targetId, normalizedAction);
+        }
+    }
+
+    private void applyTopicAction(Long targetId, String action) {
+        switch (action) {
+            case "LOCK" -> jdbc.update(
+                    "UPDATE topics SET status = 'LOCKED' WHERE id = :id",
+                    new MapSqlParameterSource("id", targetId)
+            );
+            case "HIDE" -> jdbc.update(
+                    "UPDATE topics SET status = 'HIDDEN' WHERE id = :id",
+                    new MapSqlParameterSource("id", targetId)
+            );
+            case "DELETE" -> jdbc.update(
+                    "UPDATE topics SET status = 'DELETED', deleted_at = CURRENT_TIMESTAMP WHERE id = :id",
+                    new MapSqlParameterSource("id", targetId)
+            );
+            default -> {
+            }
+        }
+    }
+
+    private void applyReplyAction(Long targetId, String action) {
+        if (!"HIDE".equals(action) && !"DELETE".equals(action)) {
+            return;
+        }
+        jdbc.update(
+                """
+                UPDATE replies
+                SET status = :status,
+                    deleted_at = CASE WHEN :status = 'DELETED' THEN CURRENT_TIMESTAMP ELSE deleted_at END
+                WHERE id = :id
+                """,
+                new MapSqlParameterSource()
+                        .addValue("id", targetId)
+                        .addValue("status", action)
+        );
+    }
+
     public ModerationRecordDto createModerationRecord(
             Long reportId,
             Long operatorId,

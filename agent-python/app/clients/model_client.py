@@ -6,8 +6,9 @@ from app.core.config import Settings
 
 
 class ModelClient:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, http_client: httpx.AsyncClient) -> None:
         self._settings = settings
+        self._http_client = http_client
 
     async def complete(self, system: str, user: str) -> str | None:
         if not self._settings.model_base_url or not self._settings.model_api_key:
@@ -24,10 +25,14 @@ class ModelClient:
         headers = {"Authorization": f"Bearer {self._settings.model_api_key}"}
         url = self._settings.model_base_url.rstrip("/") + "/chat/completions"
 
-        async with httpx.AsyncClient(timeout=self._settings.model_timeout_seconds) as client:
-            response = await client.post(url, headers=headers, json=payload)
-            response.raise_for_status()
-            data = response.json()
+        response = await self._http_client.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=self._settings.model_timeout_seconds,
+        )
+        response.raise_for_status()
+        data = response.json()
 
         choices = data.get("choices") or []
         if not choices:

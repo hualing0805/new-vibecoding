@@ -194,6 +194,7 @@ a:focus-visible {
 
 .icon-button,
 .action-row button,
+.secondary-action,
 .admin-actions button,
 .reply-card button {
   display: inline-flex;
@@ -206,6 +207,14 @@ a:focus-visible {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-control);
+}
+
+.reply-like-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-muted);
+  font-size: 14px;
 }
 
 .icon-button {
@@ -291,6 +300,10 @@ a:focus-visible {
 
 .detail-layout {
   grid-template-columns: minmax(0, 1fr) 330px;
+}
+
+.detail-state {
+  grid-column: 1 / -1;
 }
 
 .single-column-layout {

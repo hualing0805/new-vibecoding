@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from time import perf_counter
 
 from app.clients.model_client import ModelClient
@@ -18,6 +19,8 @@ from app.schemas.agent import (
     TopicSummaryResponse,
 )
 from app.tools.java_tools import JavaForumTools
+
+logger = logging.getLogger(__name__)
 
 
 class ForumAgent:
@@ -151,6 +154,7 @@ class ForumAgent:
         try:
             return await self._model_client.complete(system=system, user=user)
         except Exception:
+            logger.warning("Model completion failed; using deterministic fallback", exc_info=True)
             return None
 
     @staticmethod
